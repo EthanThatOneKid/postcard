@@ -1,6 +1,6 @@
 import { preprocessImage } from './vision/processor';
 import { extractPostmark, OCRResult } from './vision/ocr';
-import { navigatorAgent } from './agents/navigator';
+import { navigateToSource } from './agents/navigator';
 import { auditPostmark, AuditResult } from './agents/verifier';
 
 export interface PostcardReport {
@@ -24,12 +24,9 @@ export async function processPostcard(imageBuffer: Buffer): Promise<PostcardRepo
   const ocr = await extractPostmark(processed);
   
   // 3. Triangulate URL (Navigator Agent)
-  const navResult = await navigatorAgent.invoke({
-    postmark: ocr.postmark,
-    markdown: ocr.markdown
-  });
+  const navResult = await navigateToSource(ocr.postmark, ocr.markdown);
   
-  const targetUrl = navResult.identifiedUrl;
+  const targetUrl = navResult.url;
   
   // 4. Audit Postmark (Forensic Verifier)
   let audit: AuditResult = {

@@ -9,12 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@langchain/core": "^1.1.29",
-    "@langchain/langgraph": "^1.2.0",
-    "@langchain/openai": "^1.2.11",
-    "@mistralai/mistralai": "^1.14.1",
-    "@toolhouseai/sdk": "^1.1.7",
+    "@ai-sdk/google": "^3.0.33",
+    "ai": "^6.0.103",
     "next": "16.1.6",
     "playwright": "^1.58.2",
     "react": "19.2.3",
