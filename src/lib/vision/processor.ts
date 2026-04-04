@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import sharp from "sharp";
 
 export interface PreprocessingOptions {
   contrast?: number;
@@ -8,17 +8,20 @@ export interface PreprocessingOptions {
 
 export async function preprocessImage(
   imageBuffer: Buffer,
-  options: PreprocessingOptions = {}
+  options: PreprocessingOptions = {},
 ): Promise<Buffer> {
   // Resize to max 1024px on either axis before any other ops — reduces input
   // token count significantly without losing OCR-relevant detail.
   let pipeline = sharp(imageBuffer).resize(1024, 1024, {
-    fit: 'inside',
+    fit: "inside",
     withoutEnlargement: true,
   });
 
   if (options.contrast !== undefined) {
-    pipeline = pipeline.linear(options.contrast, -(128 * options.contrast) + 128);
+    pipeline = pipeline.linear(
+      options.contrast,
+      -(128 * options.contrast) + 128,
+    );
   }
 
   if (options.brightness !== undefined) {

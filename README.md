@@ -1,6 +1,6 @@
 # Postcard
 
-> *Trace every post back to its source.*
+> _Trace every post back to its source._
 
 Postcard is a digital forensics tool that takes a screenshot of a social media post and traces it to its origin — calculating how much the content has drifted from the original along the way.
 
@@ -42,12 +42,12 @@ npm run dev
 
 ## Tech stack
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Frontend | Next.js | Responsive dashboard and fast API routes. |
-| AI / Vision | Gemini 2.5/3 | Native vision and Google Search grounding built-in. |
-| Orchestration | AI SDK v6 | Idiomatic structured output and tool integration. |
-| Storage | Drizzle ORM + Turso/libSQL | Type-safe persistence with low cold-start SQLite. |
+| Layer         | Choice                     | Why                                                 |
+| ------------- | -------------------------- | --------------------------------------------------- |
+| Frontend      | Next.js                    | Responsive dashboard and fast API routes.           |
+| AI / Vision   | Gemini 2.5/3               | Native vision and Google Search grounding built-in. |
+| Orchestration | AI SDK v6                  | Idiomatic structured output and tool integration.   |
+| Storage       | Drizzle ORM + Turso/libSQL | Type-safe persistence with low cold-start SQLite.   |
 
 ---
 

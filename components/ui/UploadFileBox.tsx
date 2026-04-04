@@ -1,19 +1,15 @@
-import { 
-  Field, 
-  FieldLabel, 
-  FieldDescription 
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export function EvidenceUpload() {
   return (
     <div className="w-full max-w-sm">
       <Field>
         <FieldLabel htmlFor="picture">Evidence Image</FieldLabel>
-        <Input 
-          id="picture" 
-          type="file" 
-          className="cursor-pointer" 
+        <Input
+          id="picture"
+          type="file"
+          className="cursor-pointer"
           accept="image/*"
         />
         <FieldDescription>
@@ -21,5 +17,5 @@ export function EvidenceUpload() {
         </FieldDescription>
       </Field>
     </div>
-  )
+  );
 }

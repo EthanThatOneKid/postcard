@@ -1,11 +1,13 @@
-import { google } from '@ai-sdk/google';
-import { generateText, Output } from 'ai';
-import { z } from 'zod';
-import type { Postmark } from '../vision/ocr';
+import { google } from "@ai-sdk/google";
+import { generateText, Output } from "ai";
+import { z } from "zod";
+import type { Postmark } from "../vision/ocr";
 
 export const NavigatorResultSchema = z.object({
-  url: z.string().url().optional().describe('The identified source URL'),
-  queries: z.array(z.string()).describe('The search queries used for triangulation'),
+  url: z.string().url().optional().describe("The identified source URL"),
+  queries: z
+    .array(z.string())
+    .describe("The search queries used for triangulation"),
 });
 
 export type NavigatorResult = z.infer<typeof NavigatorResultSchema>;
@@ -15,7 +17,7 @@ export async function navigateToSource(
   markdown: string,
 ): Promise<NavigatorResult> {
   const { output } = await generateText({
-    model: google('gemini-1.5-flash'),
+    model: google("gemini-1.5-flash"),
     maxRetries: 0,
     tools: {
       google_search: google.tools.googleSearch({}),
@@ -25,15 +27,15 @@ export async function navigateToSource(
     }),
     messages: [
       {
-        role: 'user',
+        role: "user",
         content: `
           You are the "Navigator Agent" for Postcard, a digital forensics system.
           Your goal is to triangulate the exact source URL of the provided screenshot data.
 
           Postmark Metadata:
           - Platform: ${postmark.platform}
-          - Username: ${postmark.username ?? 'unknown'}
-          - Timestamp: ${postmark.timestampText ?? 'unknown'}
+          - Username: ${postmark.username ?? "unknown"}
+          - Timestamp: ${postmark.timestampText ?? "unknown"}
           - Engagement: ${JSON.stringify(postmark.engagement ?? {})}
 
           Content Preview:

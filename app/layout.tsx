@@ -19,7 +19,8 @@ const garamond = EB_Garamond({
 
 export const metadata: Metadata = {
   title: "Postcard — Trace every post back to its source",
-  description: "Digital forensics tool for tracing social media posts to their origin.",
+  description:
+    "Digital forensics tool for tracing social media posts to their origin.",
 };
 
 export default function RootLayout({
@@ -32,7 +33,10 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full antialiased", playfair.variable, garamond.variable)}
     >
-      <body className="min-h-full flex flex-col" style={{ background: "var(--postal-paper)" }}>
+      <body
+        className="min-h-full flex flex-col"
+        style={{ background: "var(--postal-paper)" }}
+      >
         {children}
       </body>
     </html>
