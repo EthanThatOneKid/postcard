@@ -26,9 +26,14 @@ Image Buffer
 └──────────┬──────────┘
            ▼
 ┌─────────────────────┐
-│  4. Forensic Auditor │  Playwright — scrapes live page
-│  (agents/verifier)   │  Computes origin/temporal/visual scores
-└─────────────────────┘
+│  4. Forensic Auditor │  AI SDK agent + google_search
+│  (agents/verifier)   │  Verifies URL, timestamp, platform
+└──────────┬──────────┘
+           ▼
+┌─────────────────────────┐
+│  5. Corroboration Agent │  AI SDK v6 agent loop + google_search
+│  (agents/corroborator)  │  Primary source dorking via trusted domains
+└──────────┬──────────────┘
            ▼
 PostcardReport
 ```
@@ -40,7 +45,7 @@ PostcardReport
 ```typescript
 // src/lib/vision/processor.ts
 
-import sharp from 'sharp';
+import sharp from "sharp";
 
 export interface PreprocessingOptions {
   contrast?: number;
@@ -50,12 +55,15 @@ export interface PreprocessingOptions {
 
 export async function preprocessImage(
   imageBuffer: Buffer,
-  options: PreprocessingOptions = {}
+  options: PreprocessingOptions = {},
 ): Promise<Buffer> {
   let pipeline = sharp(imageBuffer);
 
   if (options.contrast !== undefined) {
-    pipeline = pipeline.linear(options.contrast, -(128 * options.contrast) + 128);
+    pipeline = pipeline.linear(
+      options.contrast,
+      -(128 * options.contrast) + 128,
+    );
   }
 
   if (options.brightness !== undefined) {
@@ -79,31 +87,46 @@ export async function preprocessImage(
 ```typescript
 // src/lib/vision/ocr.ts
 
-import { google } from '@ai-sdk/google';
-import { generateText, Output } from 'ai';
-import { z } from 'zod';
+import { google } from "@ai-sdk/google";
+import { generateText, Output } from "ai";
+import { z } from "zod";
 
 export const PostmarkSchema = z.object({
-  username: z.string().optional().describe('Found handles like @username'),
-  timestampText: z.string().optional().describe('Relative or absolute timestamp in the shot (e.g. "2h ago", "Oct 12, 2025")'),
-  platform: z.enum(['X', 'YouTube', 'Reddit', 'Instagram', 'Other']).default('Other'),
-  engagement: z.object({
-    likes: z.string().optional(),
-    retweets: z.string().optional(),
-    views: z.string().optional(),
-  }).optional(),
-  mainText: z.string().describe('The primary content of the postcard'),
-  uiAnchors: z.array(z.object({
-    element: z.string(),
-    position: z.string(),
-    confidence: z.number(),
-  })).optional(),
+  username: z.string().optional().describe("Found handles like @username"),
+  timestampText: z
+    .string()
+    .optional()
+    .describe(
+      'Relative or absolute timestamp in the shot (e.g. "2h ago", "Oct 12, 2025")',
+    ),
+  platform: z
+    .enum(["X", "YouTube", "Reddit", "Instagram", "Other"])
+    .default("Other"),
+  engagement: z
+    .object({
+      likes: z.string().optional(),
+      retweets: z.string().optional(),
+      views: z.string().optional(),
+    })
+    .optional(),
+  mainText: z.string().describe("The primary content of the postcard"),
+  uiAnchors: z
+    .array(
+      z.object({
+        element: z.string(),
+        position: z.string(),
+        confidence: z.number(),
+      }),
+    )
+    .optional(),
 });
 
 export type Postmark = z.infer<typeof PostmarkSchema>;
 
 export const OCRResultSchema = z.object({
-  markdown: z.string().describe('Raw extracted text in interleaved Markdown format'),
+  markdown: z
+    .string()
+    .describe("Raw extracted text in interleaved Markdown format"),
   postmark: PostmarkSchema,
 });
 
@@ -111,22 +134,24 @@ export type OCRResult = z.infer<typeof OCRResultSchema>;
 
 export async function extractPostmark(
   imageBuffer: Buffer,
-  mimeType: string = 'image/png'
+  mimeType: string = "image/png",
 ): Promise<OCRResult> {
   const { output } = await generateText({
-    model: google('gemini-2.0-flash'),
+    model: google("gemini-2.0-flash"),
     output: Output.object({
       schema: z.object({
-        markdown: z.string().describe('Raw extracted text in interleaved Markdown format'),
+        markdown: z
+          .string()
+          .describe("Raw extracted text in interleaved Markdown format"),
         postmark: PostmarkSchema,
       }),
     }),
     messages: [
       {
-        role: 'user',
+        role: "user",
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `
               Analyze this screenshot as a "Postcard" from the digital web.
               Extract the raw text into interleaved Markdown format.
@@ -139,7 +164,7 @@ export async function extractPostmark(
             `,
           },
           {
-            type: 'image',
+            type: "image",
             image: imageBuffer,
           },
         ],
@@ -160,14 +185,16 @@ export async function extractPostmark(
 ```typescript
 // src/lib/agents/navigator.ts
 
-import { google } from '@ai-sdk/google';
-import { generateText, Output } from 'ai';
-import { z } from 'zod';
-import type { Postmark } from '../vision/ocr';
+import { google } from "@ai-sdk/google";
+import { generateText, Output } from "ai";
+import { z } from "zod";
+import type { Postmark } from "../vision/ocr";
 
 export const NavigatorResultSchema = z.object({
-  url: z.string().url().optional().describe('The identified source URL'),
-  queries: z.array(z.string()).describe('The search queries used for triangulation'),
+  url: z.string().url().optional().describe("The identified source URL"),
+  queries: z
+    .array(z.string())
+    .describe("The search queries used for triangulation"),
 });
 
 export type NavigatorResult = z.infer<typeof NavigatorResultSchema>;
@@ -177,7 +204,7 @@ export async function navigateToSource(
   markdown: string,
 ): Promise<NavigatorResult> {
   const { output } = await generateText({
-    model: google('gemini-2.0-flash'),
+    model: google("gemini-2.0-flash"),
     tools: {
       google_search: google.tools.googleSearch({}),
     },
@@ -186,15 +213,15 @@ export async function navigateToSource(
     }),
     messages: [
       {
-        role: 'user',
+        role: "user",
         content: `
           You are the "Navigator Agent" for Postcard, a digital forensics system.
           Your goal is to triangulate the exact source URL of the provided screenshot data.
 
           Postmark Metadata:
           - Platform: ${postmark.platform}
-          - Username: ${postmark.username ?? 'unknown'}
-          - Timestamp: ${postmark.timestampText ?? 'unknown'}
+          - Username: ${postmark.username ?? "unknown"}
+          - Timestamp: ${postmark.timestampText ?? "unknown"}
           - Engagement: ${JSON.stringify(postmark.engagement ?? {})}
 
           Content Preview:
@@ -221,16 +248,28 @@ export async function navigateToSource(
 ```typescript
 // src/lib/agents/verifier.ts
 
-import { chromium } from 'playwright';
-import { z } from 'zod';
-import type { Postmark } from '../vision/ocr';
+import { chromium } from "playwright";
+import { z } from "zod";
+import type { Postmark } from "../vision/ocr";
 
 export const AuditResultSchema = z.object({
-  originScore: z.number().min(0).max(1).describe('0 or 1 — URL is reachable'),
-  temporalScore: z.number().min(0).max(1).describe('0–1 — timestamp consistency'),
-  visualScore: z.number().min(0).max(1).describe('0–1 — UI fingerprint alignment'),
-  totalScore: z.number().min(0).max(1).describe('Weighted sum: 0.4*O + 0.3*T + 0.3*V'),
-  auditLog: z.array(z.string()).describe('Step-by-step audit trail'),
+  originScore: z.number().min(0).max(1).describe("0 or 1 — URL is reachable"),
+  temporalScore: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("0–1 — timestamp consistency"),
+  visualScore: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("0–1 — UI fingerprint alignment"),
+  totalScore: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Weighted sum: 0.4*O + 0.3*T + 0.3*V"),
+  auditLog: z.array(z.string()).describe("Step-by-step audit trail"),
 });
 
 export type AuditResult = z.infer<typeof AuditResultSchema>;
@@ -249,12 +288,12 @@ export async function auditPostmark(
   let visualScore = 0;
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: "networkidle" });
     originScore = 1;
-    auditLog.push('URL verified: Direct match found.');
+    auditLog.push("URL verified: Direct match found.");
 
     const pageTitle = await page.title();
-    const pageContent = await page.innerText('body');
+    const pageContent = await page.innerText("body");
 
     auditLog.push(`Page title: ${pageTitle}`);
 
@@ -263,19 +302,27 @@ export async function auditPostmark(
       pageContent.includes(screenshotPostmark.timestampText)
     ) {
       temporalScore = 1;
-      auditLog.push('Temporal match: Timestamp consistent with live page content.');
+      auditLog.push(
+        "Temporal match: Timestamp consistent with live page content.",
+      );
     } else {
       temporalScore = 0.5;
-      auditLog.push('Temporal warning: Exact timestamp text not found in live page.');
+      auditLog.push(
+        "Temporal warning: Exact timestamp text not found in live page.",
+      );
     }
 
     const platformIdentifier = screenshotPostmark.platform.toLowerCase();
     if (pageContent.toLowerCase().includes(platformIdentifier)) {
       visualScore = 0.9;
-      auditLog.push('Visual consistency: UI fingerprints align with platform template.');
+      auditLog.push(
+        "Visual consistency: UI fingerprints align with platform template.",
+      );
     } else {
       visualScore = 0.4;
-      auditLog.push('Visual anomaly: Unexpected UI layout for the expected platform.');
+      auditLog.push(
+        "Visual anomaly: Unexpected UI layout for the expected platform.",
+      );
     }
   } catch (error) {
     auditLog.push(`Audit failed: ${(error as Error).message}`);
@@ -283,7 +330,8 @@ export async function auditPostmark(
     await browser.close();
   }
 
-  const totalScore = 0.4 * originScore + 0.3 * temporalScore + 0.3 * visualScore;
+  const totalScore =
+    0.4 * originScore + 0.3 * temporalScore + 0.3 * visualScore;
 
   return AuditResultSchema.parse({
     originScore,
@@ -299,6 +347,78 @@ export async function auditPostmark(
 
 ---
 
+### Primary Source Corroboration (Google Dorking)
+
+```typescript
+// src/lib/agents/corroborator.ts
+
+import { google } from "@ai-sdk/google";
+import { generateText } from "ai";
+import { z } from "zod";
+
+const TRUSTED_DOMAINS = [
+  "nytimes.com",
+  "washingtonpost.com",
+  "reuters.com",
+  "apnews.com",
+  "bbc.com",
+  "theguardian.com",
+  "cnn.com",
+  "npr.org",
+  "wsj.com",
+  // ... (see full list in source)
+] as const;
+
+export const CorroborationSourceSchema = z.object({
+  url: z.string().url(),
+  title: z.string(),
+  source: z.string(),
+  snippet: z.string(),
+  relevance: z.enum(["supporting", "refuting", "neutral"]),
+  publishedDate: z.string().optional(),
+});
+
+export const CorroborationResultSchema = z.object({
+  primarySources: z.array(CorroborationSourceSchema),
+  queriesExecuted: z.array(
+    z.object({
+      query: z.string(),
+      sourcesFound: z.number(),
+    }),
+  ),
+  verdict: z.enum([
+    "verified",
+    "disputed",
+    "inconclusive",
+    "insufficient_data",
+  ]),
+  summary: z.string(),
+  confidenceScore: z.number().min(0).max(1),
+  corroborationLog: z.array(z.string()),
+});
+
+export type CorroborationResult = z.infer<typeof CorroborationResultSchema>;
+
+export async function corroboratePostmark(
+  postmark: Postmark,
+  mainText: string,
+  onProgress?: (log: string) => void,
+): Promise<CorroborationResult> {
+  // AI SDK agent loop with google_search tool
+  // Max 5 tool calls, synthesizes dorked queries against trusted domains
+  // Returns structured corroboration report with verdict and confidence
+}
+```
+
+**Key features:**
+
+- **Trusted domain allowlist** — 20+ vetted news and primary source domains
+- **Platform-specific dorking patterns** — `site:x.com "exact phrase"` for Twitter, etc.
+- **AI SDK agent loop** — tool-call iteration up to 5 searches
+- **Structured verdict** — `verified` | `disputed` | `inconclusive` | `insufficient_data`
+
+---
+
 ## Pipeline Entry Point
 
 ```typescript
@@ -309,80 +429,53 @@ import { preprocessImage } from './vision/processor';
 import { extractPostmark } from './vision/ocr';
 import { navigateToSource } from './agents/navigator';
 import { auditPostmark } from './agents/verifier';
+import { corroboratePostmark } from './agents/corroborator';
+
+export const CorroborationSchema = z.object({
+  primarySources: z.array(z.object({ url: z.string(), title: z.string(), ... })),
+  queriesExecuted: z.array(z.object({ query: z.string(), sourcesFound: z.number() })),
+  verdict: z.enum(['verified', 'disputed', 'inconclusive', 'insufficient_data']),
+  summary: z.string(),
+  confidenceScore: z.number().min(0).max(1),
+  corroborationLog: z.array(z.string()),
+});
 
 export const PostcardReportSchema = z.object({
-  ocr: z.object({
-    markdown: z.string(),
-    postmark: z.object({
-      username: z.string().optional(),
-      timestampText: z.string().optional(),
-      platform: z.string(),
-      engagement: z.record(z.string()).optional(),
-      mainText: z.string(),
-      uiAnchors: z.array(z.object({
-        element: z.string(),
-        position: z.string(),
-        confidence: z.number(),
-      })).optional(),
-    }),
-  }),
-  triangulation: z.object({
-    targetUrl: z.string().url().optional(),
-    queries: z.array(z.string()),
-  }),
-  audit: z.object({
-    originScore: z.number(),
-    temporalScore: z.number(),
-    visualScore: z.number(),
-    totalScore: z.number(),
-    auditLog: z.array(z.string()),
-  }),
+  ocr: z.object({ markdown: z.string(), postmark: PostmarkSchema }),
+  triangulation: z.object({ targetUrl: z.string().optional(), queries: z.array(z.string()) }),
+  audit: z.object({ originScore: z.number(), temporalScore: z.number(), ... }),
+  corroboration: CorroborationSchema,
   timestamp: z.string().datetime(),
 });
 
 export type PostcardReport = z.infer<typeof PostcardReportSchema>;
 
 export async function processPostcard(imageBuffer: Buffer): Promise<PostcardReport> {
-  // 1. Preprocess
   const processed = await preprocessImage(imageBuffer, { contrast: 1.2, sharpen: true });
-
-  // 2. OCR + Postmark
   const ocr = await extractPostmark(processed);
-
-  // 3. Triangulate URL (Navigator Agent)
   const { url: targetUrl, queries } = await navigateToSource(ocr.postmark, ocr.markdown);
 
-  // 4. Audit (skip if no URL found)
   const audit = targetUrl
     ? await auditPostmark(targetUrl, ocr.postmark)
-    : {
-        originScore: 0,
-        temporalScore: 0,
-        visualScore: 0,
-        totalScore: 0,
-        auditLog: ['Skipping audit: No target URL identified.'],
-      };
+    : { originScore: 0, temporalScore: 0, visualScore: 0, totalScore: 0, auditLog: ['Skipping audit: No target URL identified.'] };
 
-  return PostcardReportSchema.parse({
-    ocr,
-    triangulation: { targetUrl, queries },
-    audit,
-    timestamp: new Date().toISOString(),
-  });
+  const corroboration = await corroboratePostmark(ocr.postmark, ocr.markdown);
+
+  return PostcardReportSchema.parse({ ocr, triangulation: { targetUrl, queries }, audit, corroboration, timestamp: new Date().toISOString() });
 }
 ```
 
-**Zod usage:** `PostcardReportSchema` is the top-level schema for the entire pipeline output. The final `PostcardReportSchema.parse()` call validates the complete report before returning it to the caller.
+**Zod usage:** `PostcardReportSchema` now includes the `corroboration` field. The final `PostcardReportSchema.parse()` validates the complete report including primary source findings.
 
 ---
 
 ## Score Model
 
-| Signal | Weight | Description |
-|--------|--------|-------------|
-| Origin (O) | 40% | URL is reachable and matches the postmark platform |
-| Temporal (T) | 30% | Timestamp in screenshot is consistent with live page |
-| Visual (V) | 30% | UI fingerprints (CSS, layout, logos) match expected platform |
+| Signal       | Weight | Description                                                  |
+| ------------ | ------ | ------------------------------------------------------------ |
+| Origin (O)   | 40%    | URL is reachable and matches the postmark platform           |
+| Temporal (T) | 30%    | Timestamp in screenshot is consistent with live page         |
+| Visual (V)   | 30%    | UI fingerprints (CSS, layout, logos) match expected platform |
 
 ```
 TotalScore = 0.4·O + 0.3·T + 0.3·V
@@ -394,10 +487,11 @@ Audit log entries document each step for human reviewability.
 
 ## File Map
 
-| File | Responsibility |
-|------|----------------|
-| `src/lib/postcard.ts` | Pipeline entry point + top-level schema |
-| `src/lib/vision/processor.ts` | Image preprocessing (sharp) |
-| `src/lib/vision/ocr.ts` | AI SDK v6 OCR + PostmarkSchema |
-| `src/lib/agents/navigator.ts` | AI SDK v6 Navigator Agent + google_search |
-| `src/lib/agents/verifier.ts` | Playwright Forensic Auditor + AuditResultSchema |
+| File                             | Responsibility                                  |
+| -------------------------------- | ----------------------------------------------- |
+| `src/lib/postcard.ts`            | Pipeline entry point + top-level schema         |
+| `src/lib/vision/processor.ts`    | Image preprocessing (sharp)                     |
+| `src/lib/vision/ocr.ts`          | AI SDK v6 OCR + PostmarkSchema                  |
+| `src/lib/agents/navigator.ts`    | AI SDK v6 Navigator Agent + google_search       |
+| `src/lib/agents/verifier.ts`     | Playwright Forensic Auditor + AuditResultSchema |
+| `src/lib/agents/corroborator.ts` | Primary Source Corroboration + Google Dorking   |
