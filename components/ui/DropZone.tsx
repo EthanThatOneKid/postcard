@@ -549,8 +549,8 @@ export function DropZone({
                   e.currentTarget.style.background = "var(--postal-ink)";
                 }}
                 onClick={() => {
-                  const url = inputRef.current?.value;
-                  if (url) handleSubmit(url);
+                  const url = inputRef.current?.value ?? "";
+                  handleSubmit(url);
                 }}
               >
                 Trace Post
