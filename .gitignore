@@ -44,3 +44,6 @@ next-env.d.ts
 .agents/
 .gemini/
 .claude/
+
+# test results
+test-results/
