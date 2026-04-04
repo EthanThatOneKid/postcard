@@ -179,20 +179,3 @@ const TotalScore = (O * WEIGHTS.ORIGIN) + (T * WEIGHTS.TEMPORAL) + (V * WEIGHTS.
 
 ---
 
-## Technical task breakdown
-
-### Phase 1: The foundation
-- **Task 1 (Yves):** Initialize Next.js project and build the "Evidence Upload" landing page.
-- **Task 2 (Ethan):** Configure AI SDK v6 environment variables and the **Drizzle + Turso** libSQL schema.
-
-### Phase 2: Vision and search
-- **Task 3 (Yves):** Implement Stage 1 & 2 (Sharp preprocessing + Gemini postmark extraction).
-- **Task 4 (Ethan):** Implement Stage 3 (Navigator agent with `googleSearch` and Jina Reader integration).
-
-### Phase 3: Audit and score
-- **Task 5 (Yves):** Build the multimodal auditor (Stage 4) using Gemini to verify content consistency.
-- **Task 6 (Ethan):** Implement the weighted logic for the Postmark score and sync results to **Turso** via Drizzle.
-
-### Phase 4: Frontend polish
-- **Task 7 (Yves):** Build the "Travel Log" dashboard component with color-coded alerts.
-- **Task 8 (Ethan):** Implement the real-time "Loading State" logs to reflect the backend audit trail.
