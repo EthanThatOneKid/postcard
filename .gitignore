@@ -47,3 +47,13 @@ next-env.d.ts
 
 # test results
 test-results/
+
+# skills
+skills-lock.json
+
+# drizzle
+drizzle/
+
+# local database
+*.db
+*.db-journal

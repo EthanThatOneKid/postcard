@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { processTrace } from "@/lib/postcard";
+import { processPostcardFromUrl, PostcardRequestSchema } from "@/lib/postcard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const RequestSchema = z.object({
-  url: z.string().url(),
-  userApiKey: z.string().optional(),
-});
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const traceId = crypto.randomUUID();
+  const postcardId = crypto.randomUUID();
 
   let body: unknown;
   try {
@@ -20,7 +14,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const parsed = RequestSchema.safeParse(body);
+  const parsed = PostcardRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request.", details: parsed.error.flatten() },
@@ -43,12 +37,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       try {
         send("progress", {
           stage: "starting",
-          message: "Initializing trace...",
+          message: "Initializing postcard...",
           progress: 0,
-          traceId,
+          postcardId,
         });
 
-        const report = await processTrace(
+        const report = await processPostcardFromUrl(
           url,
           userApiKey,
           (stage, message, progress) => {
@@ -56,10 +50,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           },
         );
 
-        send("complete", { trace: report });
+        send("complete", { postcard: report });
       } catch (error) {
         send("error", {
-          error: error instanceof Error ? error.message : "Trace failed",
+          error: error instanceof Error ? error.message : "Postcard failed",
         });
       } finally {
         controller.close();
@@ -72,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
-      "X-Trace-Id": traceId,
+      "X-Postcard-Id": postcardId,
     },
   });
 }
