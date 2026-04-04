@@ -1,109 +1,36 @@
-# Postcard
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-> *Trace every post back to its source.*
+## Getting Started
 
-Postcard is a digital forensics tool that takes a screenshot of a social media post and traces it to its origin — calculating how much the content has drifted from the original along the way.
-
-**Track:** PantherHacks 2026 — Cybersecurity  
-**Team:** Ethan + Yves  
-**Stack:** Next.js · Gemini (Google AI) · Toolhouse · LangGraph
-
----
-
-## What It Does
-
-1. **Upload** a screenshot of any social media post
-2. **Vision parse** — Gemini extracts text, handles, timestamps, engagement counts
-3. **Navigator agent** — synthesizes high-precision search queries to find the primary source
-4. **Forensic verifier** — checks source URL, timestamp consistency, visual fingerprints
-5. **Postmark Score** + **Travel Log** — the verdict and the content's full path
-
----
-
-## Postmark Score
-
-```
-S = (w₁ · Origin) + (w₂ · Temporal) + (w₃ · Visual)
-```
-
-| Score | Label | Meaning |
-|-------|-------|---------|
-| 0.9+ | ✅ Verified Origin | Primary source confirmed |
-| 0.5–0.9 | ⚠️ Unreliable Postmark | Modified, parodied, or detunneled |
-| < 0.5 | 🔴 Fabricated | Fabricated or heavily manipulated |
-
----
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                     Postcard                             │
-│                                                           │
-│  Upload ──► Vision Parse ──► Navigator ──► Verdict      │
-│   (UI)     (Gemini)        (Agent)        (Score + Log)  │
-└──────────────────────────────────────────────────────────┘
-```
-
-### Component A — Vision Parser
-- Model: Gemini 2.0 Flash (with Google Search grounding)
-- Extracts: text, @handles, timestamps, view/like counts
-
-### Component B — Navigator Agent
-- Model: GPT-4o or Claude 3.5 Sonnet
-- Synthesizes OCR data into precise search queries
-- Multi-turn verification loop via LangGraph
-
-### Component C — Forensic Verifier
-- Live fetch + Wayback Machine API for archived snapshots
-- Temporal consistency check
-- Visual fingerprint comparison
-
----
-
-## Quick Start
+First, run the development server:
 
 ```bash
-git clone https://github.com/EthanThatOneKid/postcard.git
-cd postcard
-npm install
-cp .env.example .env.local
-# Add GEMINI_API_KEY to .env.local
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Tech Stack
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Frontend | Next.js | Responsive dashboard, easy API routes |
-| AI / Vision | Gemini 2.0 Flash | Native vision + Google Search built-in |
-| Agentic | LangGraph | Stateful multi-turn verification loops |
-| Search | Toolhouse | Seamless browser/search tool integration |
-| Storage | Milvus / Pinecone | Vector DB for UI fingerprints |
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
----
+## Learn More
 
-## File Structure
+To learn more about Next.js, take a look at the following resources:
 
-```
-postcard/
-├── DESIGN.md          # Full design doc
-├── README.md          # This file
-├── src/
-│   ├── app/
-│   │   ├── page.tsx          # Landing + upload
-│   │   ├── dashboard/page.tsx
-│   │   └── api/process/
-│   │       └── route.ts     # Trace endpoint
-│   ├── lib/
-│   │   ├── vision/
-│   │   │   ├── processor.ts  # Image preprocessing
-│   │   │   └── ocr.ts       # Gemini vision OCR
-│   │   ├── agents/
-│   │   │   ├── navigator.ts # Search query synthesis
-│   │   │   └── verifier.ts  # Forensic checks
-│   │   └── postcard.ts      # Core scoring logic
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
