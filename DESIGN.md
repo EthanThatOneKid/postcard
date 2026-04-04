@@ -1,4 +1,4 @@
-# Postcard design document
+# Postcard technical design
 
 > **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves)  
 > **Event:** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
@@ -21,7 +21,14 @@ Screenshots strip context. Cropped text, missing timestamps, and altered engagem
 
 ## Technical architecture
 
-Postcard operates as a sequential pipeline using **AI SDK v6** for structured forensic extraction and grounding.
+Postcard operates as a forensic pipeline designed to audit social media content. While the system supports screenshot-to-URL resolution, the primary focus is the **URL-based entrypoint**, where users submit a direct post URL for deep forensic verification.
+
+### Forensic pipeline (URL entrypoint)
+
+1. **URL Entrypoint:** Users submit the direct source URL for forensic verification.
+2. **Multimodal Ingest:** Jina Reader fetches the live content to establish ground truth.
+3. **Forensic Audit:** Playwright and direct site checks verify origin and temporal alignment.
+4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to verify claims.
 
 ### Pipeline stages
 
@@ -208,7 +215,7 @@ export const sources = sqliteTable("sources", {
 });
 ```
 
-## Caching strategy
+## Database and caching
 
 Postcard caches forensic results at the **Resolved Post URL** level.
 
@@ -220,7 +227,7 @@ Postcard caches forensic results at the **Resolved Post URL** level.
   - **Cache Hit:** Increment the `hits` count on the associated `analysis`. Serve cached forensic data and postcard score.
   - **Cache Miss:** Scrape via Jina Reader, perform full corroboration, and persist a new forensic record.
 
-This strategy ensures that multiple screenshots of the same post (different crops, qualities) share the same forensic audit trail while tracking the post's forensic "popularity."
+Postcard caches forensic results at the **Resolved Post URL** level.
 
 ## User interface
 
