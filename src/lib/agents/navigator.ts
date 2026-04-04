@@ -1,7 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import type { Postmark } from "../vision/ocr";
+import type { Postcard } from "../vision/ocr";
 
 export const NavigatorResultSchema = z.object({
   url: z.string().url().optional().describe("The identified source URL"),
@@ -13,7 +13,7 @@ export const NavigatorResultSchema = z.object({
 export type NavigatorResult = z.infer<typeof NavigatorResultSchema>;
 
 export async function navigateToSource(
-  postmark: Postmark,
+  postcard: Postcard,
   markdown: string,
 ): Promise<NavigatorResult> {
   const { output } = await generateText({
@@ -32,11 +32,11 @@ export async function navigateToSource(
           You are the "Navigator Agent" for Postcard, a digital forensics system.
           Your goal is to triangulate the exact source URL of the provided screenshot data.
 
-          Postmark Metadata:
-          - Platform: ${postmark.platform}
-          - Username: ${postmark.username ?? "unknown"}
-          - Timestamp: ${postmark.timestampText ?? "unknown"}
-          - Engagement: ${JSON.stringify(postmark.engagement ?? {})}
+          Postcard Metadata:
+          - Platform: ${postcard.platform}
+          - Username: ${postcard.username ?? "unknown"}
+          - Timestamp: ${postcard.timestampText ?? "unknown"}
+          - Engagement: ${JSON.stringify(postcard.engagement ?? {})}
 
           Content Preview:
           ${markdown.slice(0, 1000)}

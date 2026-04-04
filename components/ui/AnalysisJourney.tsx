@@ -213,7 +213,7 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
     score >= 90
       ? "✓ Verified Origin"
       : score >= 50
-        ? "⚠ Unreliable Postmark"
+        ? "⚠ Unreliable Postcard"
         : "✗ Fabricated";
   const statusColor =
     score >= 90
@@ -359,7 +359,7 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
             style={{ background: "var(--postal-ink-faint)" }}
           />
 
-          {/* Postmark Score */}
+          {/* Postcard Score */}
           <div className="mb-4">
             <p
               className="text-[10px] tracking-[0.2em] uppercase mb-2"
@@ -368,7 +368,7 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
                 color: "var(--postal-ink-muted)",
               }}
             >
-              Postmark Score
+              Postcard Score
             </p>
             <div className="flex items-center gap-3">
               {/* Score bar */}

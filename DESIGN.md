@@ -3,7 +3,7 @@
 > **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves)  
 > **Event:** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
 > **Track:** Cybersecurity
-> **Stack:** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Jina Reader
+> **Stack:** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Playwright, sharp
 
 ## Project vision
 
@@ -25,11 +25,11 @@ Postcard operates as a sequential pipeline using **AI SDK v6** for structured fo
 
 ### Pipeline stages
 
-#### Image preprocessor
+#### Stage 1: Preprocessor
 
-The preprocessor uses **Sharp** to normalize contrast, adjust brightness, and sharpen the image. This optimization ensures high-quality OCR results in the next stage.
+The preprocessor uses **sharp** to normalize contrast, adjust brightness, and sharpen the image. This optimization Ensures high-quality OCR results in the next stage.
 
-#### OCR and platform inference
+#### Stage 2: OCR and platform inference
 
 Gemini 2.5/3+ analyzes the processed image to extract structured metadata and **infer the social media platform** (X, YouTube, Reddit, Instagram, or 'Other'). This inference is critical for direct search dorking.
 
@@ -56,7 +56,7 @@ export const PostcardSchema = z.object({
 });
 ```
 
-#### Post resolution and Jina scrape
+#### Stage 3: Navigator agent
 
 The navigator agent uses the inferred platform and OCR metadata to locate the **specific source URL** of the post.
 
@@ -83,7 +83,9 @@ CONSTRAINTS:
 
 **Jina Reader integration:** Once the agent resolves the unique post URL (e.g., `https://twitter.com/user/status/123`), it uses the **Jina Reader API** (`https://r.jina.ai/<url>`) to scrape the **live metadata** (exact like counts, character-by-character text, absolute timestamps). This serves as our "ground truth" for the post itself.
 
-#### Primary source corroboration (Google Dorking)
+#### Stage 4: Forensic auditor
+
+Playwright scrapes the live URL to compute the final forensic subscores.
 
 Using an allowlist of trusted domains, the auditor performs **Google Dorking** to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
 
@@ -110,7 +112,7 @@ forbes.com, bloomberg.com, wired.com, arstechnica.com, techcrunch.com
 | **Reddit**      | `site:reddit.com/r/subreddit "thread title"` | Narrow to specific communities.     |
 | **News**        | `site:nytimes.com "statement context"`       | Find corroborating primary sources. |
 
-The system calculates the final **postcard score** by comparing the screenshot, the Jina-scraped post metadata, and the dorked primary sources.
+The system calculates the final **postcard score** by comparing the resolved post metadata, the live site state, and corroborated primary sources.
 
 ## Database schema
 
@@ -246,15 +248,19 @@ The system combines subscores into a weighted percentage (0–100%) to provide a
 #### Weighted formula
 
 ```javascript
-// Weights are calibrated to prioritize origin reachability.
+// Weights are calibrated to prioritize origin reachability and corroboration.
 const WEIGHTS = {
-  ORIGIN: 0.4, // URL reachability
-  TEMPORAL: 0.3, // Timestamp consistency
-  VISUAL: 0.3, // UI fingerprint & Bias analysis
+  ORIGIN: 0.3, // URL reachability
+  CORROBORATION: 0.25, // Independent source count
+  BIAS: 0.25, // Editorial divergence
+  TEMPORAL: 0.2, // Timestamp alignment
 };
 
 const TotalScore =
-  O * WEIGHTS.ORIGIN + T * WEIGHTS.TEMPORAL + V * WEIGHTS.VISUAL;
+  O * WEIGHTS.ORIGIN +
+  C * WEIGHTS.CORROBORATION +
+  B * WEIGHTS.BIAS +
+  T * WEIGHTS.TEMPORAL;
 ```
 
 #### Subscore definitions
@@ -293,8 +299,9 @@ Analysis {
   postcardScore: number | null   // 0–100
   subscores: {
     origin:        number | null
+    corroboration: number | null
+    bias:          number | null
     temporal:      number | null
-    visual:        number | null
   } | null
   result: {
     postUrl:         string | null
@@ -308,10 +315,14 @@ Analysis {
 
 ### Endpoints
 
-| Method   | Path                 | Description                                        |
-| :------- | :------------------- | :------------------------------------------------- |
-| **POST** | `/api/analyses`      | Upload screenshot and start the forensic pipeline. |
-| **GET**  | `/api/analyses/{id}` | Retrieve the analysis result and postcard score.   |
+| Method   | Path                  | Description                                      |
+| :------- | :-------------------- | :----------------------------------------------- |
+| **POST** | `/api/postcards`      | Submit post URL and start forensic SSE stream.   |
+| **GET**  | `/api/postcards/{id}` | Retrieve the analysis result and postcard score. |
+
+### API Design Decisions
+
+- **JSON-body for SSE:** The `POST /api/postcards` endpoint accepts a JSON body (e.g., `{ "url": "..." }`) rather than URL search parameters. This simplifies the OpenAPI specification and ensures robust handling of complex or long URLs.
 
 ### Error contracts (AIP-193)
 

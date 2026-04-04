@@ -67,7 +67,7 @@ export async function extractPostcard(
             text: `
               Analyze this screenshot as a "Postcard" from the digital web.
               Extract the raw text into interleaved Markdown format.
-              Also, identify the "Postmark" metadata specifically looking for:
+              Also, identify the "Postcard" metadata specifically looking for:
               - User handles (@username)
               - Timestamps (e.g., "2h ago", "Feb 10")
               - Engagement metrics (likes, views, retweets)
