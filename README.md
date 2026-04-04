@@ -57,7 +57,20 @@ All technical documentation is consolidated in [DESIGN.md](file:///c:/Users/etha
 
 ```bash
 postcard/
-├── DESIGN.md          # Master design + pipeline + schema
-├── README.md          # Technical overview
-├── src/               # Implementation (in progress)
+├── DESIGN.md          # Full design doc
+├── README.md          # This file
+├── src/
+│   ├── app/
+│   │   ├── page.tsx          # Landing + upload
+│   │   ├── dashboard/page.tsx
+│   │   └── api/process/
+│   │       └── route.ts     # Trace endpoint
+│   ├── lib/
+│   │   ├── vision/
+│   │   │   ├── processor.ts  # Image preprocessing
+│   │   │   └── ocr.ts       # Gemini vision OCR
+│   │   ├── agents/
+│   │   │   ├── navigator.ts # Search query synthesis
+│   │   │   └── verifier.ts  # Forensic checks
+│   │   └── postcard.ts      # Core scoring logic
 ```
