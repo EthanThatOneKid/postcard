@@ -6,7 +6,7 @@ Postcard is a digital forensics tool that takes a screenshot of a social media p
 
 **Track:** PantherHacks 2026 — Cybersecurity  
 **Team:** Ethan + Yves  
-**Stack:** Next.js · Gemini (Google AI) · AI SDK v6 · SQLite
+**Stack:** Next.js · Gemini (Google AI) · AI SDK v6 · Drizzle ORM + Turso/libSQL
 
 ---
 
@@ -33,7 +33,8 @@ git clone https://github.com/EthanThatOneKid/postcard.git
 cd postcard
 npm install
 cp .env.example .env.local
-# Add GEMINI_API_KEY to .env.local
+# Add GEMINI_API_KEY, TURSO_DATABASE_URL, and TURSO_AUTH_TOKEN to .env.local
+npx drizzle-kit push
 npm run dev
 ```
 
@@ -46,7 +47,7 @@ npm run dev
 | Frontend | Next.js | Responsive dashboard and fast API routes. |
 | AI / Vision | Gemini 2.5/3 | Native vision and Google Search grounding built-in. |
 | Orchestration | AI SDK v6 | Idiomatic structured output and tool integration. |
-| Storage | SQLite | Server-side caching for forensic analysis results. |
+| Storage | Drizzle ORM + Turso/libSQL | Type-safe persistence with low cold-start SQLite. |
 
 ---
 

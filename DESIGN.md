@@ -3,7 +3,7 @@
 > **Team:** Ethan (lead) + Yves  
 > **Event:** PantherHacks 2026 (April 3–5, 2026)  
 > **Track:** Cybersecurity  
-> **Stack:** Next.js · Gemini 2.5/3+ · AI SDK v6 · SQLite · Jina Reader
+> **Stack:** Next.js · Gemini 2.5/3+ · AI SDK v6 · Drizzle ORM + Turso/libSQL · Jina Reader
 
 ---
 
@@ -70,7 +70,7 @@ The auditor compares the original screenshot against the Jina-rendered Markdown 
 
 ## Database schema
 
-Postcard uses **SQLite** for server-side caching and forensic log storage. This ensures instant responses for previously analyzed images.
+Postcard uses **Drizzle ORM** with **Turso/libSQL** for type-safe server-side caching and forensic log storage. This ensuring high performance with zero cold-start penalties in serverless environments.
 
 ### Entity relationship diagram
 
@@ -107,29 +107,42 @@ erDiagram
     analyses ||--o{ judgments : "receives"
 ```
 
-### Table definitions
+### Drizzle schema definition
 
-```sql
-CREATE TABLE analyses (
-    id TEXT PRIMARY KEY,
-    status TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+```typescript
+import { sqliteTable, text, real, blob } from 'drizzle-orm/sqlite-core';
 
-CREATE TABLE screenshots (
-    id TEXT PRIMARY KEY,
-    analysis_id TEXT REFERENCES analyses(id),
-    sha256 TEXT UNIQUE NOT NULL,
-    data BLOB NOT NULL
-);
+export const analyses = sqliteTable('analyses', {
+  id: text('id').primaryKey(),
+  status: text('status').notNull(),
+  createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
+});
 
-CREATE TABLE judgments (
-    id TEXT PRIMARY KEY,
-    analysis_id TEXT REFERENCES analyses(id),
-    subscore_type TEXT NOT NULL, -- 'corroboration', 'bias', 'temporal'
-    score REAL NOT NULL,
-    reasoning TEXT
-);
+export const screenshots = sqliteTable('screenshots', {
+  id: text('id').primaryKey(),
+  analysisId: text('analysis_id').references(() => analyses.id),
+  sha256: text('sha256').unique().notNull(),
+  data: blob('data').notNull(),
+});
+
+export const judgments = sqliteTable('judgments', {
+  id: text('id').primaryKey(),
+  analysisId: text('analysis_id').references(() => analyses.id),
+  subscoreType: text('subscore_type').notNull(),
+  score: real('score').notNull(),
+  reasoning: text('reasoning'),
+});
+```
+
+### Tooling & Migrations
+
+- **ORM:** [Drizzle ORM](https://orm.drizzle.team/)
+- **Database:** [Turso/libSQL](https://turso.tech/)
+- **CLI:** `drizzle-kit` for schema pushing and migrations.
+
+```bash
+# Apply schema changes to Turso
+npx drizzle-kit push
 ```
 
 ---
@@ -170,7 +183,7 @@ const TotalScore = (O * WEIGHTS.ORIGIN) + (T * WEIGHTS.TEMPORAL) + (V * WEIGHTS.
 
 ### Phase 1: The foundation
 - **Task 1 (Yves):** Initialize Next.js project and build the "Evidence Upload" landing page.
-- **Task 2 (Ethan):** Configure AI SDK v6 environment variables and the SQLite schema.
+- **Task 2 (Ethan):** Configure AI SDK v6 environment variables and the **Drizzle + Turso** libSQL schema.
 
 ### Phase 2: Vision and search
 - **Task 3 (Yves):** Implement Stage 1 & 2 (Sharp preprocessing + Gemini postmark extraction).
@@ -178,7 +191,7 @@ const TotalScore = (O * WEIGHTS.ORIGIN) + (T * WEIGHTS.TEMPORAL) + (V * WEIGHTS.
 
 ### Phase 3: Audit and score
 - **Task 5 (Yves):** Build the multimodal auditor (Stage 4) using Gemini to verify content consistency.
-- **Task 6 (Ethan):** Implement the weighted logic for the Postmark score and sync results to SQLite.
+- **Task 6 (Ethan):** Implement the weighted logic for the Postmark score and sync results to **Turso** via Drizzle.
 
 ### Phase 4: Frontend polish
 - **Task 7 (Yves):** Build the "Travel Log" dashboard component with color-coded alerts.
