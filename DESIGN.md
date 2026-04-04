@@ -86,13 +86,13 @@ erDiagram
     screenshots {
         text id PK
         text analysis_id FK
-        text sha256 UNIQUE
+        text sha256 "unique"
         blob data
     }
     posts {
         text id PK
         text analysis_id FK
-        text url UNIQUE
+        text url "unique"
         text platform
         text post_text
         text metadata
