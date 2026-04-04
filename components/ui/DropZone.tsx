@@ -14,21 +14,18 @@ function PaperPlane({ className = "" }: { className?: string }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Main upper wing */}
       <polygon
         points="0,32 120,8 82,32"
         fill="var(--postal-paper)"
         stroke="var(--postal-ink-faint)"
         strokeWidth="0.8"
       />
-      {/* Lower fold */}
       <polygon
         points="0,32 82,32 52,52"
         fill="var(--postal-paper-2)"
         stroke="var(--postal-ink-faint)"
         strokeWidth="0.8"
       />
-      {/* Fold crease */}
       <line
         x1="0"
         y1="32"
@@ -37,7 +34,6 @@ function PaperPlane({ className = "" }: { className?: string }) {
         stroke="var(--postal-ink-faint)"
         strokeWidth="0.7"
       />
-      {/* Hint of airmail stripe on wing */}
       <line
         x1="30"
         y1="20"
@@ -92,7 +88,6 @@ function AirmailAnimation({
           "linear-gradient(to bottom, var(--postal-sky) 0%, var(--postal-paper) 100%)",
       }}
     >
-      {/* Subtle clouds behind */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none opacity-40"
         viewBox="0 0 1200 800"
@@ -117,7 +112,6 @@ function AirmailAnimation({
       </svg>
 
       <AnimatePresence mode="wait">
-        {/* Stage 1: Envelope */}
         {stage === "envelope" && (
           <motion.div
             key="envelope"
@@ -131,7 +125,6 @@ function AirmailAnimation({
               border: "2px solid var(--postal-ink-faint)",
             }}
           >
-            {/* Airmail diagonal border */}
             <div
               className="absolute inset-x-0 top-0 h-3"
               style={{
@@ -181,7 +174,6 @@ function AirmailAnimation({
               }}
             />
 
-            {/* URL inside */}
             <div className="absolute inset-3 mt-3 mb-3 flex items-center justify-center overflow-hidden rounded-[2px]">
               <span
                 className="text-xs truncate px-2"
@@ -194,7 +186,6 @@ function AirmailAnimation({
               </span>
             </div>
 
-            {/* Corner stamp circles */}
             <div className="absolute top-4 right-4 flex gap-1">
               <div
                 className="w-5 h-5 rounded-full border-2"
@@ -206,7 +197,6 @@ function AirmailAnimation({
               />
             </div>
 
-            {/* Label */}
             <div
               className="absolute bottom-5 left-5 text-[9px] tracking-[0.25em] uppercase"
               style={{
@@ -219,7 +209,6 @@ function AirmailAnimation({
           </motion.div>
         )}
 
-        {/* Stage 2: Folding */}
         {stage === "folding" && (
           <motion.div
             key="folding"
@@ -229,7 +218,6 @@ function AirmailAnimation({
             transition={{ duration: 0.45, ease: EASE }}
             className="relative"
           >
-            {/* Folded paper / transition shape */}
             <div
               className="w-64 h-32 rounded-sm shadow-xl flex items-center justify-center"
               style={{
@@ -247,7 +235,6 @@ function AirmailAnimation({
               >
                 Folding…
               </span>
-              {/* Fold crease lines */}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
@@ -265,7 +252,6 @@ function AirmailAnimation({
           </motion.div>
         )}
 
-        {/* Stage 3: Airplane revealed */}
         {stage === "airplane" && (
           <motion.div
             key="airplane"
@@ -279,7 +265,6 @@ function AirmailAnimation({
         )}
       </AnimatePresence>
 
-      {/* Stage 4: Flying off screen */}
       <AnimatePresence>
         {stage === "flying" && (
           <motion.div
@@ -305,7 +290,6 @@ function AirmailAnimation({
         )}
       </AnimatePresence>
 
-      {/* Bottom caption */}
       <div
         className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs italic text-center"
         style={{
@@ -376,7 +360,6 @@ export function DropZone({
 
   return (
     <>
-      {/* Animation overlay */}
       <AnimatePresence>
         {animating && postUrl && (
           <AirmailAnimation
@@ -386,13 +369,11 @@ export function DropZone({
         )}
       </AnimatePresence>
 
-      {/* URL Input card */}
       <section
         className="w-full px-6 pb-20 pt-4"
         style={{ background: "var(--postal-paper)" }}
       >
         <div className="mx-auto max-w-xl">
-          {/* Section heading */}
           <div className="text-center mb-6">
             <h2
               className="text-2xl font-semibold italic mb-1"
@@ -415,7 +396,6 @@ export function DropZone({
             </p>
           </div>
 
-          {/* Stamp card */}
           <div
             className="relative transition-all duration-200"
             style={{
@@ -431,7 +411,6 @@ export function DropZone({
             role="region"
             aria-label="Post URL input"
           >
-            {/* Airmail top stripe */}
             <div
               className="h-3 rounded-t-[2px]"
               style={{
@@ -445,7 +424,6 @@ export function DropZone({
               }}
             />
 
-            {/* URL Input area */}
             <div
               className="m-4 flex flex-col items-center justify-center py-12 rounded-[1px]"
               style={{
@@ -453,7 +431,6 @@ export function DropZone({
                 transition: "border-color 0.2s",
               }}
             >
-              {/* Input icon — envelope with link */}
               <div className="mb-5">
                 <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none">
                   <rect
@@ -477,7 +454,6 @@ export function DropZone({
                     strokeWidth="2"
                     style={{ transition: "stroke 0.2s" }}
                   />
-                  {/* Link icon */}
                   <path
                     d="M18 20h-2M18 32h-2"
                     stroke="var(--postal-red)"
@@ -503,7 +479,6 @@ export function DropZone({
                 Enter post URL to trace
               </p>
 
-              {/* URL Input */}
               <input
                 ref={inputRef}
                 type="url"
@@ -530,7 +505,6 @@ export function DropZone({
                 }}
               />
 
-              {/* Submit button */}
               <button
                 type="button"
                 className="mt-4 px-6 py-2 text-sm transition-all duration-150"
@@ -567,7 +541,6 @@ export function DropZone({
               </p>
             </div>
 
-            {/* Airmail bottom stripe */}
             <div
               className="h-3 rounded-b-[2px]"
               style={{
@@ -582,7 +555,6 @@ export function DropZone({
             />
           </div>
 
-          {/* Error */}
           <AnimatePresence>
             {error && (
               <motion.p

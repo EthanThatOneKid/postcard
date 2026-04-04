@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import type { PostcardReport } from "@/src/lib/postcard";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-/* ── Stage config ──────────────────────────────────── */
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4;
 
 interface StageInfo {
   label: string;
   detail: string;
-  mailboxX: number; // 0–100 percentage across landscape
+  mailboxX: number;
 }
 
 const STAGES: StageInfo[] = [
@@ -32,7 +32,8 @@ const STAGES: StageInfo[] = [
   },
 ];
 
-/* ── Paper airplane SVG ───────────────────────────── */
+const STAGE_DURATIONS = [2800, 3200, 3200];
+
 function PaperPlane({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -83,7 +84,6 @@ function PaperPlane({ className = "" }: { className?: string }) {
   );
 }
 
-/* ── Cloud ─────────────────────────────────────────── */
 function Cloud({
   cx,
   cy,
@@ -131,7 +131,6 @@ function Cloud({
   );
 }
 
-/* ── Mailbox ───────────────────────────────────────── */
 function Mailbox({
   active,
   passed,
@@ -144,7 +143,6 @@ function Mailbox({
   const label = STAGES[stageIndex].label;
   return (
     <g className={active ? "mailbox-glowing" : ""}>
-      {/* Post */}
       <rect
         x="18"
         y="44"
@@ -153,7 +151,6 @@ function Mailbox({
         rx="1"
         fill="var(--postal-green-dark)"
       />
-      {/* Box body */}
       <rect
         x="4"
         y="26"
@@ -162,7 +159,6 @@ function Mailbox({
         rx="3"
         fill={passed ? "var(--postal-red)" : "#8b6340"}
       />
-      {/* Slot */}
       <rect
         x="10"
         y="32"
@@ -171,14 +167,12 @@ function Mailbox({
         rx="1.5"
         fill="rgba(0,0,0,0.25)"
       />
-      {/* Flag */}
       {passed && (
         <g style={{ animation: "flag-raise 0.4s ease-out both" }}>
           <rect x="36" y="18" width="2" height="12" fill="#c8a060" />
           <polygon points="38,18 38,26 46,22" fill="var(--postal-red)" />
         </g>
       )}
-      {/* Glow dot */}
       {active && (
         <circle
           cx="20"
@@ -188,7 +182,6 @@ function Mailbox({
           opacity="0.9"
         />
       )}
-      {/* Label (above) */}
       {(active || passed) && (
         <text
           x="20"
@@ -206,409 +199,93 @@ function Mailbox({
   );
 }
 
-/* ── Results Postcard ─────────────────────────────── */
-function ResultsPostcard({
-  postUrl,
-  traceData,
-}: {
-  postUrl: string;
-  traceData: TraceData | null;
-}) {
-  const score = traceData?.postcardScore ?? 0.72;
-  const status =
-    score >= 90
-      ? "✓ Verified Origin"
-      : score >= 50
-        ? "⚠ Unreliable Postcard"
-        : "✗ Fabricated";
-  const statusColor =
-    score >= 90
-      ? "var(--postal-green-mid)"
-      : score >= 50
-        ? "var(--postal-amber)"
-        : "var(--postal-red)";
-  const verdict = traceData?.corroboration?.verdict ?? "inconclusive";
-  const summary =
-    traceData?.corroboration?.summary ?? "No corroboration data available.";
+async function fetchReport(postUrl: string): Promise<PostcardReport> {
+  const response = await fetch("/api/postcards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: postUrl }),
+  });
 
-  return (
-    <motion.div
-      initial={{ scale: 0.85, opacity: 0, rotateY: -20 }}
-      animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-      transition={{ duration: 0.9, ease: EASE }}
-      className="relative shadow-2xl"
-      style={{
-        width: "min(680px, 95vw)",
-        background: "var(--postal-paper)",
-        border: "1px solid var(--postal-ink-faint)",
-        borderRadius: "3px",
-      }}
-    >
-      {/* Airmail top border */}
-      <div
-        className="h-4"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            var(--postal-red) 0px, var(--postal-red) 7px,
-            transparent 7px, transparent 14px,
-            var(--postal-blue) 14px, var(--postal-blue) 21px,
-            transparent 21px, transparent 28px
-          )`,
-        }}
-      />
+  if (!response.ok || !response.body) {
+    throw new Error(`Analysis request failed: ${response.status}`);
+  }
 
-      <div className="flex gap-0">
-        {/* Left — image side */}
-        <div
-          className="relative flex-shrink-0 w-52 overflow-hidden"
-          style={{ borderRight: "1px solid var(--postal-ink-faint)" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={postUrl}
-            alt="Evidence"
-            className="w-full h-full object-cover"
-            style={{ minHeight: "240px" }}
-          />
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-          {/* Cancel stamp overlay */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <svg
-              viewBox="0 0 90 90"
-              className="w-28 h-28 opacity-60"
-              fill="none"
-            >
-              <circle
-                cx="45"
-                cy="45"
-                r="40"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-              <line
-                x1="5"
-                y1="36"
-                x2="85"
-                y2="36"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-              <line
-                x1="5"
-                y1="45"
-                x2="85"
-                y2="45"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-              <line
-                x1="5"
-                y1="54"
-                x2="85"
-                y2="54"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-            </svg>
-          </div>
-        </div>
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
 
-        {/* Right — message side */}
-        <div className="flex-1 p-6">
-          {/* Postcard header */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3
-                className="text-2xl font-black italic leading-none"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                Postcard
-              </h3>
-              <p
-                className="text-[10px] tracking-widest uppercase mt-0.5"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                Forensics Report
-              </p>
-            </div>
-            {/* Stamp graphic */}
-            <div
-              className="w-14 h-16 flex flex-col items-center justify-center text-center"
-              style={{
-                border: "1px solid var(--postal-ink-faint)",
-                background: "var(--postal-stamp-bg)",
-                borderRadius: "1px",
-              }}
-            >
-              <span style={{ fontSize: "22px" }}>✉</span>
-              <span
-                className="text-[7px] leading-tight mt-1"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                POSTCARD
-                <br />
-                FORENSICS
-              </span>
-            </div>
-          </div>
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
 
-          {/* Divider */}
-          <div
-            className="h-px mb-4"
-            style={{ background: "var(--postal-ink-faint)" }}
-          />
+    for (const block of blocks) {
+      const eventMatch = block.match(/^event: (\w+)/m);
+      const dataMatch = block.match(/^data: (.+)/m);
+      if (!eventMatch || !dataMatch) continue;
 
-          {/* Postcard Score */}
-          <div className="mb-4">
-            <p
-              className="text-[10px] tracking-[0.2em] uppercase mb-2"
-              style={{
-                fontFamily: "var(--font-serif)",
-                color: "var(--postal-ink-muted)",
-              }}
-            >
-              Postcard Score
-            </p>
-            <div className="flex items-center gap-3">
-              {/* Score bar */}
-              <div
-                className="flex-1 h-2 rounded-full overflow-hidden"
-                style={{ background: "var(--postal-paper-3)" }}
-              >
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: statusColor }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${score}%` }}
-                  transition={{ duration: 1.2, delay: 0.4, ease: EASE }}
-                />
-              </div>
-              <span
-                className="text-xl font-bold w-12 text-right"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                {score}
-              </span>
-            </div>
-            <p
-              className="text-xs mt-1.5 font-semibold"
-              style={{ fontFamily: "var(--font-serif)", color: statusColor }}
-            >
-              {status}
-            </p>
-            <p
-              className="text-xs mt-2 italic"
-              style={{
-                fontFamily: "var(--font-serif)",
-                color: "var(--postal-ink-muted)",
-              }}
-            >
-              {summary}
-            </p>
-          </div>
+      const event = eventMatch[1];
+      const payload = JSON.parse(dataMatch[1]);
 
-          {/* Divider */}
-          <div
-            className="h-px mb-4"
-            style={{ background: "var(--postal-ink-faint)" }}
-          />
+      if (event === "complete") return payload.forensicReport as PostcardReport;
+      if (event === "error") throw new Error(payload.error);
+    }
+  }
 
-          {/* Travel Log */}
-          <div>
-            <p
-              className="text-[10px] tracking-[0.2em] uppercase mb-2"
-              style={{
-                fontFamily: "var(--font-serif)",
-                color: "var(--postal-ink-muted)",
-              }}
-            >
-              Travel Log
-            </p>
-            {[
-              {
-                hop: "01",
-                label: "Source",
-                value: traceData?.url ?? postUrl,
-              },
-              {
-                hop: "02",
-                label: "Platform",
-                value: traceData?.platform ?? "Unknown",
-              },
-              {
-                hop: "03",
-                label: "Verdict",
-                value:
-                  verdict.charAt(0).toUpperCase() +
-                  verdict.slice(1).replace("_", " "),
-              },
-            ].map(({ hop, label, value }) => (
-              <div key={hop} className="flex gap-2 mb-1.5">
-                <span
-                  className="text-[9px] w-6 text-center flex-shrink-0 mt-0.5 rounded-[1px] px-0.5"
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    color: "var(--postal-paper)",
-                    background: "var(--postal-ink-muted)",
-                  }}
-                >
-                  {hop}
-                </span>
-                <div>
-                  <span
-                    className="text-[10px] font-semibold"
-                    style={{
-                      fontFamily: "var(--font-serif)",
-                      color: "var(--postal-ink)",
-                    }}
-                  >
-                    {label}:{" "}
-                  </span>
-                  <span
-                    className="text-[10px]"
-                    style={{
-                      fontFamily: "var(--font-serif)",
-                      color: "var(--postal-ink-muted)",
-                    }}
-                  >
-                    {value}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom airmail stripe */}
-      <div
-        className="h-4"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            var(--postal-red) 0px, var(--postal-red) 7px,
-            transparent 7px, transparent 14px,
-            var(--postal-blue) 14px, var(--postal-blue) 21px,
-            transparent 21px, transparent 28px
-          )`,
-        }}
-      />
-    </motion.div>
-  );
+  throw new Error("Stream ended without a result.");
 }
 
-/* ── Main AnalysisJourney ─────────────────────────── */
-
-type ApiProgress = {
-  stage: string;
-  message: string;
-  progress: number;
-};
-
-type TraceData = {
-  url: string;
-  markdown: string;
-  platform: string;
-  postcardScore: number;
-  timestamp: string;
-  corroboration: {
-    primarySources: Array<{
-      url: string;
-      title: string;
-      source: string;
-      snippet: string;
-      relevance: string;
-      publishedDate?: string;
-    }>;
-    verdict: string;
-    summary: string;
-    confidenceScore: number;
-  };
-};
-
-export function AnalysisJourney({ postUrl }: { postUrl: string }) {
+export function AnalysisJourney({
+  postUrl,
+  onComplete,
+}: {
+  postUrl: string;
+  onComplete: (report: PostcardReport) => void;
+}) {
   const [stage, setStage] = useState<AnalysisStage>(0);
-  const [showResults, setShowResults] = useState(false);
+  const [animDone, setAnimDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiProgress, setApiProgress] = useState<ApiProgress | null>(null);
-  const [traceData, setTraceData] = useState<TraceData | null>(null);
+  const pendingReport = useRef<PostcardReport | null>(null);
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    const fetchTrace = async () => {
-      try {
-        const response = await fetch("/api/postcards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: postUrl }),
-        });
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
+  useEffect(() => {
+    let elapsed = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    STAGE_DURATIONS.forEach((dur, i) => {
+      elapsed += dur;
+      timers.push(
+        setTimeout(() => setStage((i + 1) as AnalysisStage), elapsed),
+      );
+    });
+    timers.push(setTimeout(() => setAnimDone(true), elapsed + 1200));
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
+  useEffect(() => {
+    fetchReport(postUrl)
+      .then((report) => {
+        pendingReport.current = report;
+        if (animDone) onCompleteRef.current(report);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Analysis failed");
+        console.error("Analysis failed:", err);
+      });
+  }, [postUrl, animDone]);
 
-        if (!reader) {
-          throw new Error("No response body");
-        }
+  useEffect(() => {
+    if (animDone && pendingReport.current) {
+      onCompleteRef.current(pendingReport.current);
+    }
+  }, [animDone]);
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const jsonStr = line.slice(6);
-                if (!jsonStr.trim()) continue;
-                const data = JSON.parse(jsonStr);
-
-                if (data.stage) {
-                  setApiProgress(data);
-                  const progress = data.progress;
-                  if (progress < 0.33) setStage(1);
-                  else if (progress < 0.66) setStage(2);
-                  else if (progress < 1) setStage(3);
-                  else setStage(4);
-                } else if (data.trace) {
-                  setTraceData(data.trace);
-                  setStage(4);
-                  setTimeout(() => setShowResults(true), 1200);
-                } else if (data.error) {
-                  setError(data.error);
-                }
-              } catch {
-                // Skip malformed JSON
-              }
-            }
-          }
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Trace failed");
-      }
-    };
-
-    fetchTrace();
-  }, [postUrl]);
-
-  // Airplane x position across the 1200-wide SVG viewBox
   const planeX =
     stage === 0
       ? -60
@@ -635,7 +312,6 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
         )`,
       }}
     >
-      {/* Landscape SVG */}
       <div className="absolute inset-x-0" style={{ top: "15%" }}>
         <svg
           viewBox="0 0 1200 320"
@@ -643,26 +319,22 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
           preserveAspectRatio="xMidYMax meet"
           aria-hidden
         >
-          {/* Clouds */}
           <Cloud cx={100} cy={40} scale={1.1} delay={0} />
           <Cloud cx={450} cy={20} scale={0.8} delay={3} />
           <Cloud cx={800} cy={50} scale={1.0} delay={6} />
           <Cloud cx={1050} cy={25} scale={0.7} delay={2} />
           <Cloud cx={280} cy={70} scale={0.55} delay={9} />
 
-          {/* Far hills */}
           <path
             d="M0,200 C200,140 400,175 600,155 C800,130 1000,168 1200,150 L1200,320 L0,320 Z"
             fill="var(--postal-green-far)"
             opacity="0.65"
           />
-          {/* Mid hills */}
           <path
             d="M0,235 C150,195 350,220 550,208 C750,194 950,224 1200,212 L1200,320 L0,320 Z"
             fill="var(--postal-green-mid)"
             opacity="0.75"
           />
-          {/* Winding path / road */}
           <path
             d="M0,278 Q300,265 500,272 Q700,278 900,268 Q1050,260 1200,270"
             fill="none"
@@ -670,13 +342,11 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
             strokeWidth="5"
             opacity="0.5"
           />
-          {/* Near hill */}
           <path
             d="M0,280 C100,265 300,275 500,270 C700,264 900,278 1200,272 L1200,320 L0,320 Z"
             fill="var(--postal-green-near)"
           />
 
-          {/* Mailboxes */}
           {STAGES.map((s, i) => (
             <g
               key={i}
@@ -692,7 +362,6 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
         </svg>
       </div>
 
-      {/* Paper airplane */}
       <motion.div
         className="absolute pointer-events-none"
         style={{ top: "18%" }}
@@ -715,10 +384,55 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
         </div>
       </motion.div>
 
-      {/* Stage label */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
         <AnimatePresence mode="wait">
-          {!showResults && stage < 4 && (
+          {error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center gap-6 px-4"
+              style={{
+                background: "rgba(253,246,227,0.85)",
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              <p
+                className="text-lg font-bold"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-red)",
+                }}
+              >
+                Something went wrong
+              </p>
+              <p
+                className="text-sm"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                }}
+              >
+                {error}
+              </p>
+              <button
+                className="text-xs tracking-widest uppercase px-6 py-2"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                  border: "1px solid var(--postal-ink-faint)",
+                  background: "var(--postal-paper)",
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                }}
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </button>
+            </motion.div>
+          )}
+
+          {!error && stage < 4 && (
             <motion.div
               key={stage}
               initial={{ opacity: 0, y: -10 }}
@@ -739,9 +453,7 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
                   color: "var(--postal-ink-muted)",
                 }}
               >
-                {stage === 0
-                  ? "Dispatched"
-                  : (apiProgress?.stage ?? STAGES[stage - 1]?.label)}
+                {stage === 0 ? "Dispatched" : STAGES[stage - 1]?.label}
               </p>
               <p
                 className="text-sm italic"
@@ -750,119 +462,46 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
                   color: "var(--postal-ink)",
                 }}
               >
-                {stage === 0
-                  ? "Evidence en route…"
-                  : (apiProgress?.message ?? STAGES[stage - 1]?.detail)}
+                {stage === 0 ? "Evidence en route…" : STAGES[stage - 1]?.detail}
+              </p>
+            </motion.div>
+          )}
+
+          {!error && stage >= 4 && !animDone && (
+            <motion.div
+              key="waiting"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="px-5 py-3 rounded-[2px] text-center"
+              style={{
+                background: "rgba(253,246,227,0.9)",
+                border: "1px solid var(--postal-ink-faint)",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <p
+                className="text-xs tracking-[0.2em] uppercase mb-0.5"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                }}
+              >
+                Finalising
+              </p>
+              <p
+                className="text-sm italic"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink)",
+                }}
+              >
+                Your postcard is arriving…
               </p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      {/* Results postcard */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex items-center justify-center px-4"
-            style={{
-              background: "rgba(253,246,227,0.85)",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <div className="flex flex-col items-center gap-6 text-center">
-              <motion.p
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-lg font-bold"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-red)",
-                }}
-              >
-                Something went wrong
-              </motion.p>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-sm"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                {error}
-              </motion.p>
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="text-xs tracking-widest uppercase px-6 py-2"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                  border: "1px solid var(--postal-ink-faint)",
-                  background: "var(--postal-paper)",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                }}
-                onClick={() => window.location.reload()}
-              >
-                Try Again
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-        {showResults && !error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex items-center justify-center px-4"
-            style={{
-              background: "rgba(253,246,227,0.85)",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <div className="flex flex-col items-center gap-6">
-              <motion.p
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-sm italic text-center"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                Your postcard has arrived.
-              </motion.p>
-              <ResultsPostcard postUrl={postUrl} traceData={traceData} />
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="text-xs tracking-widest uppercase px-6 py-2"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                  border: "1px solid var(--postal-ink-faint)",
-                  background: "var(--postal-paper)",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                }}
-                onClick={() => window.location.reload()}
-              >
-                Trace Another Post
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processPostcardFromUrl, PostcardRequestSchema } from "@/lib/postcard";
+import {
+  processPostcardFromUrl,
+  processPostcardFromImage,
+  PostcardRequestSchema,
+} from "@/src/lib/postcard";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const postcardId = crypto.randomUUID();
+  const traceId = crypto.randomUUID();
 
   let body: unknown;
   try {
@@ -22,7 +26,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { url, userApiKey } = parsed.data;
+  const { url, image, userApiKey } = parsed.data;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -37,23 +41,46 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       try {
         send("progress", {
           stage: "starting",
-          message: "Initializing postcard...",
+          message: image
+            ? "Initializing forensic pipeline..."
+            : "Initializing trace...",
           progress: 0,
-          postcardId,
+          traceId,
         });
 
-        const report = await processPostcardFromUrl(
-          url,
-          userApiKey,
-          (stage, message, progress) => {
-            send("progress", { stage, message, progress });
-          },
-        );
+        let report;
+        let forensicReport;
 
-        send("complete", { postcard: report });
+        if (image) {
+          // Image-based analysis
+          const buffer = Buffer.from(image, "base64");
+          forensicReport = await processPostcardFromImage(buffer, "image/png");
+          report = {
+            url: forensicReport.triangulation.targetUrl || "",
+            markdown: forensicReport.ocr.markdown,
+            platform: forensicReport.ocr.postmark.platform,
+            corroboration: forensicReport.corroboration,
+            postcardScore: forensicReport.audit.totalScore,
+            timestamp: forensicReport.timestamp,
+          };
+        } else {
+          // URL-based analysis
+          report = await processPostcardFromUrl(
+            url!,
+            userApiKey,
+            (stage, message, progress) => {
+              send("progress", { stage, message, progress });
+            },
+          );
+        }
+
+        send("complete", {
+          postcard: report,
+          forensicReport,
+        });
       } catch (error) {
         send("error", {
-          error: error instanceof Error ? error.message : "Postcard failed",
+          error: error instanceof Error ? error.message : "Trace failed",
         });
       } finally {
         controller.close();
@@ -66,7 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
-      "X-Postcard-Id": postcardId,
+      "X-Trace-Id": traceId,
     },
   });
 }

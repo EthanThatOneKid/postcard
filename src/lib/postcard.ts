@@ -44,10 +44,56 @@ export const CorroborationSchema = z.object({
 
 export type Corroboration = z.infer<typeof CorroborationSchema>;
 
-export const PostcardRequestSchema = z.object({
-  url: z.string().url(),
-  userApiKey: z.string().optional(),
+export const PostcardDataSchema = z.object({
+  username: z.string().optional(),
+  timestampText: z.string().optional(),
+  platform: z.string(),
+  engagement: z.record(z.string(), z.string()).optional(),
+  mainText: z.string(),
+  uiAnchors: z
+    .array(
+      z.object({
+        element: z.string(),
+        position: z.string(),
+        confidence: z.number(),
+      }),
+    )
+    .optional(),
 });
+
+export type PostcardData = z.infer<typeof PostcardDataSchema>;
+
+export const PostcardReportSchema = z.object({
+  ocr: z.object({
+    markdown: z.string(),
+    postmark: PostcardDataSchema,
+  }),
+  triangulation: z.object({
+    targetUrl: z.string().url().optional(),
+    queries: z.array(z.string()),
+  }),
+  audit: z.object({
+    originScore: z.number(),
+    temporalScore: z.number(),
+    visualScore: z.number(),
+    totalScore: z.number(),
+    auditLog: z.array(z.string()),
+  }),
+  corroboration: CorroborationSchema,
+  timestamp: z.string().datetime(),
+});
+
+export type PostcardReport = z.infer<typeof PostcardReportSchema>;
+
+export const PostcardRequestSchema = z
+  .object({
+    url: z.string().url().optional(),
+    image: z.string().optional(), // base64 encoded image
+    userApiKey: z.string().optional(),
+  })
+  .refine((data) => data.url || data.image, {
+    message: "Either url or image must be provided",
+  });
 
 export type PostcardRequest = z.infer<typeof PostcardRequestSchema>;
 
@@ -58,6 +104,7 @@ export const PostcardResponseSchema = z.object({
   corroboration: CorroborationSchema,
   postcardScore: z.number().min(0).max(1),
   timestamp: z.string().datetime(),
+  forensicReport: PostcardReportSchema.optional(), // Include full report if requested
 });
 
 export type PostcardResponse = z.infer<typeof PostcardResponseSchema>;
@@ -276,9 +323,43 @@ function inferPlatform(url: string): string {
 export async function processPostcardFromImage(
   imageBuffer: Buffer,
   mimeType: string = "image/png",
-): Promise<PostcardResponse> {
+): Promise<PostcardReport> {
   if (process.env.NEXT_PUBLIC_MOCK_PIPELINE === "true") {
-    return { ...MOCK_POSTCARD_RESPONSE };
+    return {
+      ocr: {
+        markdown:
+          "## @YeOldeTweeter\n**Breaking: local man discovers that water is, in fact, wet.**\n*14h ago · 3.2K Retweets · 21.4K Likes*",
+        postmark: {
+          username: "@YeOldeTweeter",
+          timestampText: "14h ago",
+          platform: "X",
+          engagement: { likes: "21.4K", retweets: "3.2K", views: "812K" },
+          mainText:
+            "Breaking: local man discovers that water is, in fact, wet.",
+        },
+      },
+      triangulation: {
+        targetUrl: "https://x.com/YeOldeTweeter/status/1800000000000000001",
+        queries: [
+          'site:x.com @YeOldeTweeter "water is wet" 14h ago',
+          'YeOldeTweeter "local man discovers" tweet X',
+        ],
+      },
+      audit: {
+        originScore: 1,
+        temporalScore: 0.9,
+        visualScore: 0.9,
+        totalScore: 0.94,
+        auditLog: [
+          "[MOCK] Starting audit for URL: https://x.com/YeOldeTweeter/status/1800000000000000001",
+          "[MOCK] URL verified: Direct match found.",
+          "[MOCK] Temporal match: Timestamp consistent with live page content.",
+          "[MOCK] Visual consistency: UI fingerprints align with X platform template.",
+        ],
+      },
+      corroboration: MOCK_POSTCARD_RESPONSE.corroboration,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   const processed = await preprocessImage(imageBuffer, {
@@ -290,7 +371,10 @@ export async function processPostcardFromImage(
 
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  const { url: targetUrl } = await navigateToSource(ocr.postcard, ocr.markdown);
+  const { url: targetUrl, queries } = await navigateToSource(
+    ocr.postcard,
+    ocr.markdown,
+  );
 
   const audit = targetUrl
     ? await auditPostcard(targetUrl, ocr.postcard)
@@ -304,12 +388,14 @@ export async function processPostcardFromImage(
 
   const corroboration = await corroboratePostcard(ocr.postcard, ocr.markdown);
 
-  return PostcardResponseSchema.parse({
-    url: targetUrl || "",
-    markdown: ocr.markdown,
-    platform: ocr.postcard.platform,
+  return PostcardReportSchema.parse({
+    ocr: {
+      markdown: ocr.markdown,
+      postmark: ocr.postcard,
+    },
+    triangulation: { targetUrl, queries },
+    audit,
     corroboration,
-    postcardScore: audit.totalScore,
     timestamp: new Date().toISOString(),
   });
 }

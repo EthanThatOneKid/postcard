@@ -16,10 +16,9 @@ test("happy path: submit post URL and see results", async ({ page }) => {
   const submitButton = page.getByRole("button", { name: "Trace Post" });
   await submitButton.click();
 
-  await expect(page.getByText("Your postcard has arrived.")).toBeVisible({
+  await expect(page.getByText("Postcard Score")).toBeVisible({
     timeout: 30000,
   });
 
-  await expect(page.getByText("Postcard Score")).toBeVisible();
   await expect(page.getByText("Travel Log")).toBeVisible();
 });
