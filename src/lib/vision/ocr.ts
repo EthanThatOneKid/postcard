@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-export const PostmarkSchema = z.object({
+export const PostcardSchema = z.object({
   username: z.string().optional().describe("Found handles like @username"),
   timestampText: z
     .string()
@@ -32,18 +32,18 @@ export const PostmarkSchema = z.object({
     .optional(),
 });
 
-export type Postmark = z.infer<typeof PostmarkSchema>;
+export type Postcard = z.infer<typeof PostcardSchema>;
 
 export const OCRResultSchema = z.object({
   markdown: z
     .string()
     .describe("Raw extracted text in interleaved Markdown format"),
-  postmark: PostmarkSchema,
+  postcard: PostcardSchema,
 });
 
 export type OCRResult = z.infer<typeof OCRResultSchema>;
 
-export async function extractPostmark(
+export async function extractPostcard(
   imageBuffer: Buffer,
   mimeType: string = "image/png",
 ): Promise<OCRResult> {
@@ -55,7 +55,7 @@ export async function extractPostmark(
         markdown: z
           .string()
           .describe("Raw extracted text in interleaved Markdown format"),
-        postmark: PostmarkSchema,
+        postcard: PostcardSchema,
       }),
     }),
     messages: [

@@ -1,7 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
-import type { Postmark } from "../vision/ocr";
+import type { Postcard } from "../vision/ocr";
 
 const TRUSTED_DOMAINS = [
   "nytimes.com",
@@ -69,8 +69,8 @@ export type CorroborationResult = z.infer<typeof CorroborationResultSchema>;
 const MAX_TOOL_CALLS = 5;
 const MAX_SOURCES = 10;
 
-export async function corroboratePostmark(
-  postmark: Postmark,
+export async function corroboratePostcard(
+  postcard: Postcard,
   mainText: string,
   onProgress?: (log: string) => void,
 ): Promise<CorroborationResult> {
@@ -84,14 +84,14 @@ export async function corroboratePostmark(
   };
 
   log(
-    `Starting corroboration for ${postmark.platform} post by ${postmark.username ?? "unknown"}`,
+    `Starting corroboration for ${postcard.platform} post by ${postcard.username ?? "unknown"}`,
   );
 
   const dorkFn =
-    PlatformDorkPatterns[postmark.platform] ?? PlatformDorkPatterns.Other;
+    PlatformDorkPatterns[postcard.platform] ?? PlatformDorkPatterns.Other;
 
   log(
-    `Starting search grounding for ${postmark.platform} post using ${dorkFn(mainText).slice(0, 30)}...`,
+    `Starting search grounding for ${postcard.platform} post using ${dorkFn(mainText).slice(0, 30)}...`,
   );
 
   const { fullStream } = await streamText({
@@ -116,15 +116,11 @@ Return your final verdict in structured JSON format with relevance classificatio
     messages: [
       {
         role: "user",
-        content: `Corroborate this post:
+        content: `Analyze this post for truthfulness:
 
-Platform: ${postmark.platform}
-Username: ${postmark.username ?? "unknown"}
-Timestamp: ${postmark.timestampText ?? "unknown"}
-Engagement: ${JSON.stringify(postmark.engagement ?? {})}
-
-Post Content:
-${mainText}
+Platform: ${postcard.platform}
+Username: ${postcard.username ?? "unknown"}
+Content: ${postcard.mainText}
 
 Search for corroborating or refuting sources. Focus on:
 1. News articles from trusted domains

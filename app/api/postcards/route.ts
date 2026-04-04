@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { processTrace } from "@/src/lib/postcard";
+import { processTrace } from "@/lib/postcard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;

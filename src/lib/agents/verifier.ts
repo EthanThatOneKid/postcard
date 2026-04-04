@@ -1,7 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { z } from "zod";
-import type { Postmark } from "../vision/ocr";
+import type { Postcard } from "../vision/ocr";
 
 export const AuditResultSchema = z.object({
   originScore: z.number().min(0).max(1),
@@ -13,9 +13,9 @@ export const AuditResultSchema = z.object({
 
 export type AuditResult = z.infer<typeof AuditResultSchema>;
 
-export async function auditPostmark(
+export async function auditPostcard(
   url: string,
-  postmark: Postmark,
+  postcard: Postcard,
 ): Promise<AuditResult> {
   const auditLog: string[] = [`Starting audit for URL: ${url}`];
   let originScore = 0;
@@ -37,10 +37,10 @@ Return a JSON audit log and scores (0-1 for each).`,
         content: `Verify this post:
 
 URL: ${url}
-Platform: ${postmark.platform}
-Username: ${postmark.username ?? "unknown"}
-Timestamp: ${postmark.timestampText ?? "unknown"}
-Content: ${postmark.mainText}
+Platform: ${postcard.platform}
+Username: ${postcard.username ?? "unknown"}
+Timestamp: ${postcard.timestampText ?? "unknown"}
+Content: ${postcard.mainText}
 
 Use google_search to verify the URL exists and check timestamp alignment.`,
       },
@@ -48,7 +48,7 @@ Use google_search to verify the URL exists and check timestamp alignment.`,
   });
 
   auditLog.push(text);
-  originScore = url.includes(postmark.platform.toLowerCase()) ? 1 : 0.5;
+  originScore = url.includes(postcard.platform.toLowerCase()) ? 1 : 0.5;
   temporalScore = 0.8;
   visualScore = 0.8;
 

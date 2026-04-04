@@ -36,7 +36,7 @@ Gemini 2.5/3+ analyzes the processed image to extract structured metadata and **
 ```typescript
 import { z } from "zod";
 
-export const PostmarkSchema = z.object({
+export const PostcardSchema = z.object({
   username: z.string().optional().describe("Found handles like @username"),
   timestampText: z
     .string()
@@ -290,7 +290,7 @@ Postcard follows **Google AIP-121** (Resource-Oriented Design) and **AIP-122** (
 Analysis {
   id:            string          // Server-assigned UUID
   status:        "processing" | "done" | "error"
-  postmarkScore: number | null   // 0–100
+  postcardScore: number | null   // 0–100
   subscores: {
     origin:        number | null
     temporal:      number | null
@@ -467,7 +467,7 @@ _Follows [Google AIP-121 Resource-Oriented Design](https://google.aip.dev/121) a
 Analysis {
   id:            string          // Server-assigned UUID
   status:        "processing" | "done" | "error"
-  postmarkScore: number | null   // 0–100, null until done
+  postcardScore: number | null   // 0–100, null until done
   subscores: {
     origin:        number | null
     corroboration: number | null

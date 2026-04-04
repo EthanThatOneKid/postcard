@@ -494,22 +494,76 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
 
 /* ── Main AnalysisJourney ─────────────────────────── */
 
+type ApiProgress = {
+  stage: string;
+  message: string;
+  progress: number;
+};
+
 export function AnalysisJourney({ postUrl }: { postUrl: string }) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [apiProgress, setApiProgress] = useState<ApiProgress | null>(null);
 
   useEffect(() => {
-    let elapsed = 0;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    STAGE_DURATIONS.forEach((dur, i) => {
-      elapsed += dur;
-      timers.push(
-        setTimeout(() => setStage((i + 1) as AnalysisStage), elapsed),
-      );
-    });
-    timers.push(setTimeout(() => setShowResults(true), elapsed + 1200));
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    const fetchTrace = async () => {
+      try {
+        const response = await fetch("/api/postcards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: postUrl }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) {
+          throw new Error("No response body");
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.event === "progress") {
+                  setApiProgress(data.data);
+                  const progress = data.data.progress;
+                  if (progress < 0.33) setStage(1);
+                  else if (progress < 0.66) setStage(2);
+                  else if (progress < 1) setStage(3);
+                  else setStage(4);
+                } else if (data.event === "complete") {
+                  setStage(4);
+                  setTimeout(() => setShowResults(true), 1200);
+                } else if (data.event === "error") {
+                  setError(data.data.error);
+                }
+              } catch {
+                // Skip malformed JSON
+              }
+            }
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Trace failed");
+      }
+    };
+
+    fetchTrace();
+  }, [postUrl]);
 
   // Airplane x position across the 1200-wide SVG viewBox
   const planeX =
