@@ -372,7 +372,7 @@ Also output a short narrative explanation of what changed.
 
 **Important:** Due to the probabilistic nature of LLMs, repeated runs will NOT produce identical scores but will be **consistent within an acceptable range**. This is expected.
 
-## Caching (SQLite)
+## Caching (libSQL)
 
 **Cache key:** MD5 hash of uploaded image bytes  
 **Cache value:** Full analysis result (postcard score, all subscores, URL found, narrative)
@@ -381,7 +381,7 @@ Also output a short narrative explanation of what changed.
 
 1. User uploads image
 2. Compute MD5 hash
-3. Check SQLite for existing result → instant response if hit
+3. Check libSQL for existing result → instant response if hit
 4. If miss → run pipeline → store result → return
 
 ## UI / UX
@@ -433,7 +433,7 @@ CONSTRAINTS:
 - [ ] Step 3: Corroboration search (Gemini Google Search tool)
 - [ ] Step 4: Bias assessment (LLM judge)
 - [ ] Step 5: postcard score + progressive disclosure
-- [ ] SQLite caching
+- [ ] libSQL caching
 - [ ] Deployed live URL (Vercel)
 
 ### Future Work
@@ -450,7 +450,7 @@ CONSTRAINTS:
 - **Hosting:** Vercel
 - **Validation:** Zod
 - **AI:** AI SDK (vcore) with multimodal Gemini (text + file inputs)
-- **Persistence:** SQLite
+- **Persistence:** libSQL
 - **API Style:** REST, Google AIPs compliant
 
 **Key API:** `generativeLanguage.googleapis.com` — configure in [Settings > Advanced](/?t=settings&s=advanced) as `GEMINI_API_KEY`.

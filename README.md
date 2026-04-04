@@ -42,7 +42,7 @@ To build a system this complex in a 48-hour hackathon, we leaned heavily on **[V
 | **Frontend**   | Next.js 16 (Futuristic!)   | Responsive dashboard and high-performance API.      |
 | **AI / Vision**| Google Gemini              | Native multimodal vision + Search grounding.        |
 | **Orchestration**| Vercel AI SDK v6         | Robust tool calling and typed stream iteration.     |
-| **Storage**    | Drizzle + Turso            | Type-safe SQLite persistence for forensic logs.     |
+| **Storage**    | Drizzle + Turso            | Type-safe libSQL persistence for forensic logs.     |
 
 ---
 
