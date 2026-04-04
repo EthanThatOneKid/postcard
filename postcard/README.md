@@ -40,7 +40,7 @@ S = (w₁ · Origin) + (w₂ · Temporal) + (w₃ · Visual)
 ┌──────────────────────────────────────────────────────────┐
 │                     Postcard                             │
 │                                                           │
-│  Upload ──► Vision Parse ──► Navigator ──► Verdict        │
+│  Upload ──► Vision Parse ──► Navigator ──► Verdict      │
 │   (UI)     (Gemini)        (Agent)        (Score + Log)  │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -64,22 +64,13 @@ S = (w₁ · Origin) + (w₂ · Temporal) + (w₃ · Visual)
 ## Quick Start
 
 ```bash
-# Clone the repo
 git clone https://github.com/EthanThatOneKid/postcard.git
 cd postcard
-
-# Install dependencies
 npm install
-
-# Add your API key
 cp .env.example .env.local
-# Edit .env.local and add GEMINI_API_KEY
-
-# Run dev server
+# Add GEMINI_API_KEY to .env.local
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000), upload a screenshot, and watch it trace.
 
 ---
 
@@ -101,17 +92,18 @@ Open [http://localhost:3000](http://localhost:3000), upload a screenshot, and wa
 postcard/
 ├── DESIGN.md          # Full design doc
 ├── README.md          # This file
-├── app/
-│   ├── page.tsx       # Upload + results UI
-│   └── api/
-│       └── trace/
-│           └── route.ts  # Gemini trace endpoint
-├── components/
-│   ├── Upload.tsx
-│   ├── TravelLog.tsx
-│   └── PostmarkScore.tsx
-└── lib/
-    ├── vision.ts      # Gemini vision parsing
-    ├── navigator.ts  # Navigator agent
-    └── score.ts      # Postmark Score logic
+├── src/
+│   ├── app/
+│   │   ├── page.tsx          # Landing + upload
+│   │   ├── dashboard/page.tsx
+│   │   └── api/process/
+│   │       └── route.ts     # Trace endpoint
+│   ├── lib/
+│   │   ├── vision/
+│   │   │   ├── processor.ts  # Image preprocessing
+│   │   │   └── ocr.ts       # Gemini vision OCR
+│   │   ├── agents/
+│   │   │   ├── navigator.ts # Search query synthesis
+│   │   │   └── verifier.ts  # Forensic checks
+│   │   └── postcard.ts      # Core scoring logic
 ```
