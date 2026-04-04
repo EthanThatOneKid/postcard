@@ -1,9 +1,9 @@
 # Postcard design document
 
-> **Team:** Ethan (lead) + Yves  
+> **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves)  
 > **Event:** PantherHacks 2026 (April 3–5, 2026)  
-> **Track:** Cybersecurity  
-> **Stack:** Next.js · Gemini 2.5/3+ · AI SDK v6 · Drizzle ORM + Turso/libSQL · Jina Reader
+> **Track:** Cybersecurity
+> **Stack:** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Jina Reader
 
 ---
 
@@ -27,11 +27,11 @@ Postcard operates as a sequential pipeline using **AI SDK v6** for structured fo
 
 ### Pipeline stages
 
-#### 1. Image preprocessor
+#### Image preprocessor
 The preprocessor uses **Sharp** to normalize contrast, adjust brightness, and sharpen the image. This optimization ensures high-quality OCR results in the next stage.
 
-#### 2. OCR and postmark extraction
-Gemini 2.5/3+ analyzes the processed image to extract structured metadata into a **Postmark** object.
+#### OCR and platform inference
+Gemini 2.5/3+ analyzes the processed image to extract structured metadata and **infer the social media platform** (X, YouTube, Reddit, Instagram, or 'Other'). This inference is critical for direct search dorking.
 
 ```typescript
 import { z } from 'zod';
@@ -49,22 +49,22 @@ export const PostmarkSchema = z.object({
 });
 ```
 
-#### 3. Navigator agent
-The navigator agent synthesizes high-precision search queries from the postmark metadata. It uses the AI SDK `googleSearch` tool to triangulate candidate source URLs.
+#### Post resolution and Jina scrape
+The navigator agent uses the inferred platform and OCR metadata to locate the **specific source URL** of the post.
 
-**Jina Reader integration:** Once the agent identifies a candidate URL, it uses the **Jina Reader API** (`https://r.jina.ai/<url>`) to fetch the full page content as LLM-ready Markdown. This process ensures the system captures the full forensic context (character-by-character text, exact timestamps) while stripping away noise like ads or navigation bars.
+**Jina Reader integration:** Once the agent resolves the unique post URL (e.g., `https://twitter.com/user/status/123`), it uses the **Jina Reader API** (`https://r.jina.ai/<url>`) to scrape the **live metadata** (exact like counts, character-by-character text, absolute timestamps). This serves as our "ground truth" for the post itself.
 
-**Google dorking strategy:** The agent acts as a Google dork expert, using site-specific operators to narrow the search space:
+#### Primary source corroboration (Google Dorking)
+Using an allowlist of trusted domains, the auditor performs **Google Dorking** to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
 
 | Platform | Operator Example | Purpose |
 | :--- | :--- | :--- |
 | **X (Twitter)** | `site:twitter.com intext:"exact phrase"` | Find specific posts by content. |
 | **YouTube** | `site:youtube.com "video title"` | Locate specific video descriptions. |
 | **Reddit** | `site:reddit.com/r/subreddit "thread title"` | Narrow to specific communities. |
-| **Instagram** | `site:instagram.com "caption text"` | Trace visual posts with text clues. |
+| **News** | `site:nytimes.com "statement context"` | Find corroborating primary sources. |
 
-#### 4. Multimodal auditor
-The auditor compares the original screenshot against the Jina-rendered Markdown and search results. It calculates scores for origin reachability, temporal consistency (60-second window match), and visual signature alignment (platform-specific icons and layouts identified from the screenshot).
+The final **Postmark score** is calculated by comparing the screenshot, the Jina-scraped post metadata, and the dorked primary sources.
 
 ---
 
@@ -79,7 +79,9 @@ erDiagram
     analyses {
         text id PK
         text status
+        integer hits
         text created_at
+        text deleted_at
     }
     screenshots {
         text id PK
@@ -90,9 +92,10 @@ erDiagram
     posts {
         text id PK
         text analysis_id FK
-        text url
+        text url UNIQUE
         text platform
         text post_text
+        text metadata
     }
     judgments {
         text id PK
@@ -109,13 +112,17 @@ erDiagram
 
 ### Drizzle schema definition
 
+We use **Drizzle-Zod** to automatically generate schema validation from our database tables.
+
 ```typescript
-import { sqliteTable, text, real, blob } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, real, blob, integer } from 'drizzle-orm/sqlite-core';
 
 export const analyses = sqliteTable('analyses', {
   id: text('id').primaryKey(),
   status: text('status').notNull(),
+  hits: integer('hits').default(1).notNull(),
   createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
+  deletedAt: text('deleted_at'),
 });
 
 export const screenshots = sqliteTable('screenshots', {
@@ -125,25 +132,30 @@ export const screenshots = sqliteTable('screenshots', {
   data: blob('data').notNull(),
 });
 
-export const judgments = sqliteTable('judgments', {
+export const posts = sqliteTable('posts', {
   id: text('id').primaryKey(),
   analysisId: text('analysis_id').references(() => analyses.id),
-  subscoreType: text('subscore_type').notNull(),
-  score: real('score').notNull(),
-  reasoning: text('reasoning'),
+  url: text('url').unique().notNull(), // Unique URL for caching
+  platform: text('platform'),
+  postText: text('post_text'),
+  metadata: text('metadata'), // JSON Jina scrape results
 });
 ```
 
-### Tooling & Migrations
+---
 
-- **ORM:** [Drizzle ORM](https://orm.drizzle.team/)
-- **Database:** [Turso/libSQL](https://turso.tech/)
-- **CLI:** `drizzle-kit` for schema pushing and migrations.
+## Caching strategy
 
-```bash
-# Apply schema changes to Turso
-npx drizzle-kit push
-```
+Postcard caches forensic results at the **Resolved Post URL** level. 
+
+### Audit flow
+- **OCR Step:** Extract text and infer platform from the screenshot.
+- **Resolution Step:** Locate the unique Post URL using Google Dorking.
+- **Cache Check:** Query the `posts` table for the resolved URL.
+    - **Cache Hit:** Increment the `hits` count on the associated `analysis`. Serve cached forensic data and Postmark score.
+    - **Cache Miss:** Scrape via Jina Reader, perform full corroboration, and persist a new forensic record.
+
+This strategy ensures that multiple screenshots of the same post (different crops, qualities) share the same forensic audit trail while tracking the post's forensic "popularity."
 
 ---
 
