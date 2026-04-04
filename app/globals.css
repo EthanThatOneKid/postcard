@@ -127,3 +127,90 @@
     @apply font-mono;
   }
 }
+
+/* ── Postcard Forensics Lab Theme ─────────────────────────── */
+
+:root {
+  --lab-bg: #020b18;
+  --lab-surface: #071525;
+  --lab-surface-2: #0d1f35;
+  --lab-border: #1a3352;
+  --lab-border-dim: #0f2240;
+  --lab-cyan: #22d3ee;
+  --lab-cyan-dim: rgba(34, 211, 238, 0.12);
+  --lab-amber: #fb923c;
+  --lab-green: #34d399;
+  --lab-red: #f87171;
+  --lab-text: #cbd5e1;
+  --lab-muted: #64748b;
+  --lab-muted-2: #334155;
+}
+
+@keyframes lab-scanline {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes lab-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.15; }
+}
+
+@keyframes lab-pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+  50%       { box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.08); }
+}
+
+@keyframes lab-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lab-scanline {
+  position: fixed;
+  inset-inline: 0;
+  height: 120px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(34, 211, 238, 0.03) 40%,
+    rgba(34, 211, 238, 0.06) 50%,
+    rgba(34, 211, 238, 0.03) 60%,
+    transparent
+  );
+  animation: lab-scanline 10s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.lab-blink {
+  animation: lab-blink 1.2s ease-in-out infinite;
+}
+
+.lab-grid-bg {
+  background-color: var(--lab-bg);
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.lab-corner::before,
+.lab-corner::after,
+.lab-corner > span::before,
+.lab-corner > span::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--lab-cyan);
+  border-style: solid;
+}
+
+.lab-drop-active {
+  border-color: var(--lab-cyan) !important;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.15), inset 0 0 24px rgba(34, 211, 238, 0.04);
+  background-color: rgba(34, 211, 238, 0.04) !important;
+}

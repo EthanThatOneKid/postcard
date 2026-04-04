@@ -1,12 +1,11 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { EvidenceUpload } from "@/components/ui/UploadFileBox";
+import { Hero } from '@/components/ui/Hero'
+import { DropZone } from '@/components/ui/DropZone'
 
 export default function PostcardHome() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-bold"></h1>
-      <EvidenceUpload />
-    </div>
-  );
+    <main className="min-h-screen flex flex-col" style={{ background: 'var(--lab-bg)' }}>
+      <Hero />
+      <DropZone />
+    </main>
+  )
 }
