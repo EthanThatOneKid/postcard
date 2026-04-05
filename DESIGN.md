@@ -97,11 +97,14 @@ Postcard follows **Google AIP-121** (Resource-Oriented Design) and **AIP-122** (
 
 ### Endpoints
 
-| Method   | Path                  | Description                                      |
-| :------- | :-------------------- | :----------------------------------------------- |
-| **POST** | `/api/postcards`      | Submit post URL and start forensic SSE stream.   |
-| **GET**  | `/api/postcards/{id}` | Retrieve the analysis result and postcard score. |
+| Method   | Path                  | Description                                                                                     |
+| :------- | :-------------------- | :---------------------------------------------------------------------------------------------- |
+| **GET**  | `/postcards?url=`     | SSR page - displays forensic report for the given URL (or initiates new analysis if not cached) |
+| **GET**  | `/api/postcards?url=` | API with content negotiation - returns JSON if `Accept: application/json`, otherwise redirects  |
+| **POST** | `/api/postcards`      | Submit post URL and start forensic SSE stream                                                   |
 
 ### API design decisions
 
-- **JSON-body for SSE:** The `POST /api/postcards` endpoint accepts a JSON body (e.g., `{ "url": "..." }`) rather than URL search parameters. This simplifies the OpenAPI specification and ensures robust handling of complex or long URLs.
+- **Content negotiation:** The `GET /api/postcards?url=` endpoint supports content negotiation. If the request includes `Accept: application/json`, it returns a JSON response with the forensic report. Otherwise, it redirects to the SSR page at `/postcards?url=`.
+- **URL-based entrypoint:** Users submit the direct source URL via query parameter (`?url=`) for deep forensic verification.
+- **SSE streaming:** The `POST /api/postcards` endpoint accepts a JSON body (e.g., `{ "url": "..." }`) and streams progress events via Server-Sent Events (SSE).

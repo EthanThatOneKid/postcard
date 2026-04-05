@@ -16,14 +16,14 @@
 
 ```mermaid
 sequenceDiagram
-    participant U as Frontend (AnalysisJourney)
+    participant U as Frontend (/postcards)
     participant API as API Route (/api/postcards)
     participant P as Forensic Pipeline
     participant I as Unified Ingest (oEmbed/Jina)
     participant A as Corroborator Agent (Gemini)
     participant DB as Database (Turso)
 
-    U->>API: POST { url: "https://x.com/..." }
+    U->>API: POST /api/postcards { url: "https://x.com/..." }
     API-->>U: HTTP 200 (SSE Stream Started)
 
     API->>P: processPostcardFromUrl(url)
@@ -83,3 +83,26 @@ A key technical takeaway from this hackathon was discovering **how oEmbed APIs c
 - **[DESIGN.md](DESIGN.md):** Full technical specification and pipeline stages.
 - **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md):** High-level summary for the PantherHacks 2026 Devpost submission.
 - **[PITCH.md](PITCH.md):** Pitch script and video cues.
+
+## Usage
+
+### Web Interface
+
+Visit `/postcards?url=<post-url>` to view the forensic report for any supported social media post.
+
+### API
+
+```bash
+# Get JSON response (content negotiation)
+curl -H "Accept: application/json" \
+  "https://your-deployment/api/postcards?url=https://x.com/user/status/123"
+
+# Redirect to UI (default)
+curl "https://your-deployment/api/postcards?url=https://x.com/user/status/123"
+# → 302 Redirect to /postcards?url=...
+
+# Start new analysis (SSE)
+curl -X POST "https://your-deployment/api/postcards" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://x.com/user/status/123" }'
+```
