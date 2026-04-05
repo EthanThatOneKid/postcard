@@ -18,7 +18,8 @@ content has drifted from the ground truth.
 **Track:** [Cybersecurity](https://pantherhacks2026.devpost.com/)\
 **Submission:** [Devpost](https://devpost.com/software/postcard-bpx2mz)\
 **Challenge:** Rebuilding trust in a "post-truth" digital era.\
-**Pitch Script:** [View Video Script](./PITCH.md)
+**Pitch Script:** [View Video Script](./PITCH.md)\
+**Submission Summary:** [View Summary](./docs/devpost.md)
 
 ## Pipeline architecture
 
@@ -110,7 +111,7 @@ the source without the fragility of manual extraction.
   and architecture notes.
 - [docs/DESIGN.md](docs/DESIGN.md): Full technical specification and
   pipeline stages.
-- [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md): High-level summary for
+- [docs/devpost.md](docs/devpost.md): High-level summary for
   the PantherHacks 2026 Devpost submission.
 - [docs/PITCH.md](docs/PITCH.md): Pitch script and video cues.
 - [docs/API.md](docs/API.md): Full API reference with examples.

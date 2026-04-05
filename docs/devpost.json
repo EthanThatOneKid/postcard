@@ -1,0 +1,28 @@
+{
+  "Project": {
+    "Name": "Postcard",
+    "Tagline": "Democratizing the truth. Trace every post back to its source.",
+    "SubmissionStatus": "Draft",
+    "Track": "Cybersecurity (Forensics / OSINT)"
+  },
+  "Content": {
+    "Inspiration": "In our current 'post-truth' era, information is often consumed via contextless screenshots. By the time a post goes viral, it has been cropped, captioned, and stripped of its metadata—making it nearly impossible to tell if the content is authentic or a manufactured narrative. We wanted to build a tool that acts as a digital 'wayback machine' for credibility, restoring the lost link between viral content and its primary source.",
+    "What it does": "Postcard is a digital forensics pipeline designed to rebuild trust in online media. It takes a social media URL (or a screenshot) and traces it back to its original source. The core of the project is the Postcard Score (0–100%), a credibility metric calculated by auditing how much the content has drifted from the ground truth. Key features include automated forensic traceability, temporal drift analysis, and screenshot-to-URL resolution.",
+    "How we built it": "We developed a 4-stage forensic pipeline focused on deep audit log generation: 1. Multimodal Ingest (Jina Reader), 2. Forensic Audit (Playwright), 3. Corroboration Engine (AI-powered deep search), and 4. Frontend/API (Next.js and Vanilla CSS).",
+    "Challenges we ran into": "The biggest hurdle was 'reverse entropy'—trying to find a live URL from a static, often low-quality screenshot. Social media platforms also have aggressive bot detection, which made using Playwright for forensic verification difficult. We had to fine-tune our headers and navigation patterns to ensure we could retrieve the necessary metadata without being blocked.",
+    "Accomplishments that we're proud of": "We successfully built a functional 4-stage pipeline that does more than just 'fact-check'—it performs a technical audit. Seeing the Postcard Score update in real-time as the corroboration engine found matching sources across different platforms was a huge 'aha!' moment for the team.",
+    "What we learned": "We gained a deep appreciation for the fragility of digital metadata. We learned how easily information is manipulated once it leaves its native platform and how multimodal LLMs can be used not just for generation, but as powerful forensic tools to compare 'drift' between two pieces of content.",
+    "What's next for Postcard": "We plan to release a browser extension to bring Postcard directly into the feed, expand platform support to include Telegram and Discord, and open our forensic pipeline as an API for newsrooms to verify user-generated content in real-time."
+  },
+  "Metrics": {
+    "ForensicPipelineStages": 4,
+    "PostcardScoreRange": "0-100%",
+    "TypeSafety": "100% (TS/Lint)",
+    "SupportedPlatforms": ["X", "Reddit", "News Articles", "Screenshots"]
+  },
+  "JudgingAlignment": {
+    "Cybersecurity": "Demonstrates digital forensics and OSINT techniques to verify data integrity.",
+    "Innovation": "Uses multimodal LLMs for 'drift analysis' rather than simple text fact-checking.",
+    "UserExperience": "Provides a clean, terminal-inspired interface with real-time SSE progress updates."
+  }
+}
