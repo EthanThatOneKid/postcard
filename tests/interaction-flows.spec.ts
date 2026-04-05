@@ -5,7 +5,7 @@ test.describe("Interaction flows", () => {
     await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByLabel("Enter social media post URL");
-    await urlInput.fill("https://www.instagram.com/p/DV9hesME3ka/");
+    await urlInput.fill("https://x.com/Dexerto/status/2033247690058838157");
 
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
@@ -20,7 +20,7 @@ test.describe("Interaction flows", () => {
     await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByLabel("Enter social media post URL");
-    await urlInput.fill("https://x.com/user/status/123");
+    await urlInput.fill("https://x.com/snopes/status/2036658090599219694?s=20");
 
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();

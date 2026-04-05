@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("happy path: submit post URL triggers analysis", async ({ page }) => {
   const testUrl =
-    "https://www.reddit.com/r/conspiracy/comments/1rmd9ef/dolphinsaliens/";
+    "https://www.reddit.com/r/conspiracy/comments/1rme5ri/man_claims_to_have_been_kidnapped_by_dolphins/";
 
   await page.goto("http://localhost:3000/postcards");
 
