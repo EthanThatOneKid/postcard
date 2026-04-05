@@ -15,9 +15,7 @@ test.describe("Error cases", () => {
   test("shows error for invalid URL", async ({ page }) => {
     await page.goto("http://localhost:3000/postcards");
 
-    const urlInput = page.getByPlaceholder(
-      "https://x.com/user/status/1234567890",
-    );
+    const urlInput = page.getByLabel("Enter social media post URL");
     await expect(urlInput).toBeVisible();
     await urlInput.fill("not-a-valid-url");
 
@@ -30,9 +28,7 @@ test.describe("Error cases", () => {
   test("shows error for malformed URL", async ({ page }) => {
     await page.goto("http://localhost:3000/postcards");
 
-    const urlInput = page.getByPlaceholder(
-      "https://x.com/user/status/1234567890",
-    );
+    const urlInput = page.getByLabel("Enter social media post URL");
     await expect(urlInput).toBeVisible();
     await urlInput.fill("://missing-protocol");
 

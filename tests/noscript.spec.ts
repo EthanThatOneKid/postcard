@@ -10,6 +10,8 @@ test("landing page works without JavaScript", async ({ page }) => {
   expect(html).toContain("Spot the fabricated");
   expect(html).toContain("Trace the origin");
   expect(html).toContain("Trust the source");
-  expect(html).toContain("Enter Postcard");
-  expect(html).toContain("Ready to authenticate?");
+  expect(html).toContain("Postcard");
+  expect(html).toContain("Trace every post back to its source.");
+  expect(html).toContain("Submit a Post URL");
+  expect(html).toContain("Trace Post");
 });

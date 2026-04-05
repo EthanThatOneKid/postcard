@@ -31,29 +31,7 @@ export type ProgressCallback = (
   progress: number,
 ) => void;
 
-export interface PipelineStage {
-  key: string;
-  message: string;
-  progress: number;
-}
-
-export const PIPELINE_STAGES: PipelineStage[] = [
-  { key: "starting", message: "Initializing postcard...", progress: 0 },
-  { key: "scraping", message: "Fetching post content...", progress: 0.1 },
-  { key: "scraped", message: "Fetched content", progress: 0.3 },
-  {
-    key: "corroborating",
-    message: "Searching for primary sources...",
-    progress: 0.4,
-  },
-  {
-    key: "auditing",
-    message: "Verifying origin and temporal alignment...",
-    progress: 0.7,
-  },
-  { key: "scoring", message: "Calculating Postcard score...", progress: 0.9 },
-  { key: "complete", message: "Postcard complete", progress: 1 },
-];
+import { type PipelineStage, PIPELINE_STAGES, SCORING_WEIGHTS } from "./config";
 
 /**
  * Creates a heartbeat "pulse" that periodically updates the progress message
@@ -261,266 +239,243 @@ export async function processPostcardFromUrl(
     }
   };
 
-  if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
-    const delayMs = parseInt(
-      process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY ?? "0",
-      10,
-    );
-    const fail = process.env.NEXT_PUBLIC_FAKE_PIPELINE_FAIL === "true";
-    const urlContainsFail = normalizedUrl.toLowerCase().includes("fail");
-
-    await runPipelineStages(
-      PIPELINE_STAGES,
-      updateProgress,
-      delayMs,
-      async () => {
-        await updateProgress("corroborating", "Verifying sources...", 0.5);
-      },
-    );
-
-    if (fail || urlContainsFail) {
-      await updatePostcardRow(id!, {
-        status: "failed",
-        error: "Fake failure: External API unavailable",
-      });
-      throw new Error("Fake failure: External API unavailable");
-    }
-
-    return { ...FAKE_POSTCARD_RESPONSE };
-  }
-
   try {
-    if (!refresh) {
-      const cachedResult = await db
-        .select()
-        .from(postcards)
-        .innerJoin(posts, eq(posts.url, normalizedUrl))
-        .orderBy(sql`${postcards.createdAt} DESC`)
-        .limit(1);
-
-      if (cachedResult.length > 0) {
-        const { postcards: row, posts: post } = cachedResult[0];
-
-        const report = dbRowToReport(row, post);
-        return PostcardResponseSchema.parse({
-          url: normalizedUrl,
-          markdown: post.markdown || "",
-          platform: row.platform || "Other",
-          corroboration: report.corroboration,
-          postcardScore: row.postcardScore / 100,
-          timestamp: row.createdAt.toISOString(),
-          id: row.id,
-          forensicReport: report,
-        });
-      }
-    }
-
-    // 1. Scraping Layer
-    const baseScrapingMsg = "Fetching content from platform";
-    await updateProgress("scraping", baseScrapingMsg, 0.1);
-    const stopScrapingPulse = createPulse(
-      "scraping",
-      baseScrapingMsg,
-      0.1,
-      updateProgress,
-    );
-
-    let postData;
-    try {
-      postData = await unifiedPostClient.fetch(url, (msg) => {
-        updateProgress("scraping", msg, 0.15).catch(console.error);
-      });
-    } finally {
-      stopScrapingPulse();
-    }
-
-    const markdown = postData.markdown;
-
-    const failureReasons: string[] = [];
-    if (!markdown || markdown.length < 50) {
-      failureReasons.push("Content too short or empty");
-    }
-    if (postData.platform === "Other") {
-      failureReasons.push("Platform not recognized or supported");
-    }
-    if (markdown?.includes("Checking if the site connection is secure")) {
-      failureReasons.push("Cloudflare or security check detected");
-    }
-    if (markdown?.includes("login") || markdown?.includes("sign in")) {
-      failureReasons.push("Login or signup wall detected");
-    }
-
-    if (failureReasons.length > 0) {
-      const errorSummary = `Unable to access this content. ${failureReasons.join(". ")}. This may be due to login requirements, platform restrictions, or network issues.`;
-
-      return {
-        url,
-        markdown: markdown || "",
-        platform: postData.platform || "Other",
-        corroboration: {
-          primarySources: [],
-          queriesExecuted: [],
-          verdict: "insufficient_data",
-          summary: errorSummary,
-          confidenceScore: 0,
-          corroborationLog: [
-            `Scraping failed: ${failureReasons.join("; ")}`,
-            "The platform may require authentication or block automated access.",
-            `Retrieved markdown length: ${markdown?.length ?? 0} characters`,
-          ],
-        },
-        postcardScore: 0,
-        timestamp: new Date().toISOString(),
-      };
-    }
-
-    await updateProgress(
-      "scraped",
-      `Fetched ${markdown.length} characters`,
-      0.3,
-    );
-
-    const platform = postData.platform;
-
-    // 2. Corroboration Layer
-    const baseCorroborationMsg = "Searching for primary sources";
-    await updateProgress("corroborating", baseCorroborationMsg, 0.4);
-    const stopCorroborationPulse = createPulse(
-      "corroborating",
-      baseCorroborationMsg,
-      0.4,
-      updateProgress,
-    );
-
-    const postcard: Postcard = {
-      platform: platform as Postcard["platform"],
-      username: postData.author,
-      timestampText: postData.timestamp?.toISOString(),
-      mainText: markdown.slice(0, 500),
-    };
-
-    let corroboration;
-    try {
-      corroboration = await corroboratePostcard(
-        postcard,
-        markdown,
-        async (msg: string) => {
-          await updateProgress("corroborating", msg, 0.5);
-        },
-        userApiKey,
+    if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
+      const delayMs = parseInt(
+        process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY ?? "0",
+        10,
       );
-    } finally {
-      stopCorroborationPulse();
+      const fail = process.env.NEXT_PUBLIC_FAKE_PIPELINE_FAIL === "true";
+      const urlContainsFail = normalizedUrl.toLowerCase().includes("fail");
+
+      await runPipelineStages(
+        PIPELINE_STAGES,
+        updateProgress,
+        delayMs,
+        async () => {
+          await updateProgress("corroborating", "Verifying sources...", 0.5);
+        },
+      );
+
+      if (fail || urlContainsFail) {
+        await updatePostcardRow(id!, {
+          status: "failed",
+          error: "Fake failure: External API unavailable",
+        });
+        throw new Error("Fake failure: External API unavailable");
+      }
+
+      return { ...FAKE_POSTCARD_RESPONSE };
     }
 
-    // 3. Auditing Layer
-    const baseAuditingMsg = "Verifying origin and temporal alignment";
-    await updateProgress("auditing", baseAuditingMsg, 0.7);
-    const stopAuditingPulse = createPulse(
-      "auditing",
-      baseAuditingMsg,
-      0.7,
-      updateProgress,
-    );
-
-    let audit;
     try {
-      audit = await auditPostcard(normalizedUrl, postcard, userApiKey);
-    } finally {
-      stopAuditingPulse();
-    }
+      if (!refresh) {
+        const cachedResult = await db
+          .select()
+          .from(postcards)
+          .innerJoin(posts, eq(posts.url, normalizedUrl))
+          .orderBy(sql`${postcards.createdAt} DESC`)
+          .limit(1);
 
-    const corroborationScore = corroboration.confidenceScore;
-    const supportingSources = corroboration.primarySources.filter(
-      (s) => s.relevance === "supporting",
-    ).length;
-    const totalSources = corroboration.primarySources.length;
-    const biasScore = totalSources > 0 ? supportingSources / totalSources : 0.5;
+        if (cachedResult.length > 0) {
+          const { postcards: row, posts: post } = cachedResult[0];
 
-    await updateProgress("scoring", "Calculating Postcard score...", 0.9);
-
-    const WEIGHTS = {
-      ORIGIN: 0.3,
-      CORROBORATION: 0.25,
-      BIAS: 0.25,
-      TEMPORAL: 0.2,
-    };
-
-    const rawScore =
-      audit.originScore * WEIGHTS.ORIGIN +
-      corroborationScore * WEIGHTS.CORROBORATION +
-      biasScore * WEIGHTS.BIAS +
-      audit.temporalScore * WEIGHTS.TEMPORAL;
-
-    const postcardScore = Math.floor(rawScore * 100);
-
-    try {
-      const existingResult = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.url, normalizedUrl))
-        .limit(1);
-
-      let pId: string;
-      let aId: string;
-      if (existingResult.length > 0) {
-        pId = existingResult[0].id;
-        await db
-          .update(posts)
-          .set({
-            markdown,
-            mainText: markdown.slice(0, 500),
-            username: postcard.username,
-            timestampText: postcard.timestampText,
-            platform: postcard.platform,
-            updatedAt: new Date(),
-          })
-          .where(eq(posts.id, pId));
-
-        if (id) {
-          aId = id;
-          await db
-            .update(postcards)
-            .set({
-              postcardScore,
-              originScore: audit.originScore,
-              corroborationScore: corroboration.confidenceScore,
-              biasScore,
-              temporalScore: audit.temporalScore,
-              verdict: corroboration.verdict,
-              summary: corroboration.summary,
-              confidenceScore: corroboration.confidenceScore,
-              primarySources: JSON.stringify(corroboration.primarySources),
-              queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
-              corroborationLog: JSON.stringify(corroboration.corroborationLog),
-              auditLog: JSON.stringify(audit.auditLog),
-              status: "completed",
-              progress: 1,
-              stage: "complete",
-              message: "Analysis complete",
-              updatedAt: new Date(),
-            })
-            .where(eq(postcards.id, aId));
-        } else {
-          // Fallback for untracked processing
-          aId = crypto.randomUUID();
-          // ... (Omitted for brevity as the branch with id is primary)
-          return { ...FAKE_POSTCARD_RESPONSE }; // Should not happen in current flow
+          const report = dbRowToReport(row, post);
+          return PostcardResponseSchema.parse({
+            url: normalizedUrl,
+            markdown: post.markdown || "",
+            platform: row.platform || "Other",
+            corroboration: report.corroboration,
+            postcardScore: row.postcardScore / 100,
+            timestamp: row.createdAt.toISOString(),
+            id: row.id,
+            forensicReport: report,
+          });
         }
-      } else {
-        // New post flow
-        pId = crypto.randomUUID();
-        await db.insert(posts).values({
-          id: pId,
-          url: normalizedUrl,
+      }
+
+      // 1. Scraping Layer
+      const baseScrapingMsg = "Fetching content from platform";
+      await updateProgress("scraping", baseScrapingMsg, 0.1);
+      const stopScrapingPulse = createPulse(
+        "scraping",
+        baseScrapingMsg,
+        0.1,
+        updateProgress,
+      );
+
+      let postData;
+      try {
+        postData = await unifiedPostClient.fetch(url, (msg) => {
+          updateProgress("scraping", msg, 0.15).catch(console.error);
+        });
+      } finally {
+        stopScrapingPulse();
+      }
+
+      const markdown = postData.markdown;
+
+      const failureReasons: string[] = [];
+      if (!markdown || markdown.length < 50) {
+        failureReasons.push("Content too short or empty");
+      }
+      if (postData.platform === "Other") {
+        failureReasons.push("Platform not recognized or supported");
+      }
+      if (markdown?.includes("Checking if the site connection is secure")) {
+        failureReasons.push("Cloudflare or security check detected");
+      }
+      if (markdown?.includes("login") || markdown?.includes("sign in")) {
+        failureReasons.push("Login or signup wall detected");
+      }
+
+      if (failureReasons.length > 0) {
+        const errorSummary = `Unable to access this content. ${failureReasons.join(". ")}. This may be due to login requirements, platform restrictions, or network issues.`;
+
+        return {
+          url,
+          markdown: markdown || "",
+          platform: postData.platform || "Other",
+          corroboration: {
+            primarySources: [],
+            queriesExecuted: [],
+            verdict: "insufficient_data",
+            summary: errorSummary,
+            confidenceScore: 0,
+            corroborationLog: [
+              `Scraping failed: ${failureReasons.join("; ")}`,
+              "The platform may require authentication or block automated access.",
+              `Retrieved markdown length: ${markdown?.length ?? 0} characters`,
+            ],
+          },
+          postcardScore: 0,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      await updateProgress(
+        "scraped",
+        `Fetched ${markdown.length} characters`,
+        0.3,
+      );
+
+      const platform = postData.platform;
+
+      // 2. Corroboration Layer
+      const baseCorroborationMsg = "Searching for primary sources";
+      await updateProgress("corroborating", baseCorroborationMsg, 0.4);
+      const stopCorroborationPulse = createPulse(
+        "corroborating",
+        baseCorroborationMsg,
+        0.4,
+        updateProgress,
+      );
+
+      const postcard: Postcard = {
+        platform: platform as Postcard["platform"],
+        username: postData.author,
+        timestampText: postData.timestamp?.toISOString(),
+        mainText: markdown.slice(0, 500),
+      };
+
+      let corroboration;
+      try {
+        corroboration = await corroboratePostcard(
+          postcard,
+          markdown,
+          async (msg: string) => {
+            await updateProgress("corroborating", msg, 0.5);
+          },
+          userApiKey,
+        );
+      } finally {
+        stopCorroborationPulse();
+      }
+
+      // 3. Auditing Layer
+      const baseAuditingMsg = "Verifying origin and temporal alignment";
+      await updateProgress("auditing", baseAuditingMsg, 0.7);
+      const stopAuditingPulse = createPulse(
+        "auditing",
+        baseAuditingMsg,
+        0.7,
+        updateProgress,
+      );
+
+      let audit;
+      try {
+        audit = await auditPostcard(normalizedUrl, postcard, userApiKey);
+      } finally {
+        stopAuditingPulse();
+      }
+
+      const corroborationScore = corroboration.confidenceScore;
+      const supportingSources = corroboration.primarySources.filter(
+        (s) => s.relevance === "supporting",
+      ).length;
+      const totalSources = corroboration.primarySources.length;
+      const biasScore =
+        totalSources > 0 ? supportingSources / totalSources : 0.5;
+
+      await updateProgress("scoring", "Calculating Postcard score...", 0.9);
+
+      const rawScore =
+        audit.originScore * SCORING_WEIGHTS.ORIGIN +
+        corroborationScore * SCORING_WEIGHTS.CORROBORATION +
+        biasScore * SCORING_WEIGHTS.BIAS +
+        audit.temporalScore * SCORING_WEIGHTS.TEMPORAL;
+
+      const postcardScore = Math.floor(rawScore * 100);
+
+      const { id: pId } = await getOrCreatePostByUrl(normalizedUrl);
+
+      await db
+        .update(posts)
+        .set({
           platform: postcard.platform,
           markdown,
           mainText: markdown.slice(0, 500),
           username: postcard.username,
           timestampText: postcard.timestampText,
-        });
+          updatedAt: new Date(),
+        })
+        .where(eq(posts.id, pId));
 
-        aId = id || crypto.randomUUID();
+      const aId = id || crypto.randomUUID();
+      // Ensure we have a row if it's untracked
+      const existingRow = id
+        ? null
+        : await db
+            .select()
+            .from(postcards)
+            .where(eq(postcards.id, aId))
+            .limit(1);
+
+      if (id || existingRow?.length) {
+        await db
+          .update(postcards)
+          .set({
+            postId: pId,
+            postcardScore,
+            originScore: audit.originScore,
+            corroborationScore: corroboration.confidenceScore,
+            biasScore,
+            temporalScore: audit.temporalScore,
+            verdict: corroboration.verdict,
+            summary: corroboration.summary,
+            confidenceScore: corroboration.confidenceScore,
+            primarySources: JSON.stringify(corroboration.primarySources),
+            queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+            corroborationLog: JSON.stringify(corroboration.corroborationLog),
+            auditLog: JSON.stringify(audit.auditLog),
+            status: "completed",
+            progress: 1,
+            stage: "complete",
+            message: "Analysis complete",
+            updatedAt: new Date(),
+          })
+          .where(eq(postcards.id, aId));
+      } else {
         await db.insert(postcards).values({
           id: aId,
           postId: pId,
@@ -573,8 +528,16 @@ export async function processPostcardFromUrl(
       console.error("Database error:", dbError);
       throw dbError;
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Trace error:", error);
+    if (id) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      await updatePostcardRow(id, {
+        status: "failed",
+        error: errorMessage,
+      }).catch(console.error);
+    }
     throw error;
   }
 }

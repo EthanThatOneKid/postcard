@@ -342,9 +342,9 @@ const STEP_LABELS: Record<keyof AuditLogFields, string> = {
 };
 
 function AuditJsonEntry({ data }: { data: AuditLogFields }) {
-  const steps = (
-    Object.keys(STEP_LABELS) as (keyof AuditLogFields)[]
-  ).filter((key) => data[key] !== undefined);
+  const steps = (Object.keys(STEP_LABELS) as (keyof AuditLogFields)[]).filter(
+    (key) => data[key] !== undefined,
+  );
 
   return (
     <div

@@ -10,34 +10,12 @@ function getGoogleProvider(apiKey?: string) {
   return google;
 }
 
-const TRUSTED_DOMAINS = [
-  "nytimes.com",
-  "washingtonpost.com",
-  "reuters.com",
-  "apnews.com",
-  "bbc.com",
-  "theguardian.com",
-  "cnn.com",
-  "msnbc.com",
-  "foxnews.com",
-  "npr.org",
-  "wsj.com",
-  "bloomberg.com",
-  "politico.com",
-  "thehill.com",
-  "usatoday.com",
-  "latimes.com",
-  "axios.com",
-  "nbcnews.com",
-  "abcnews.com",
-  "cbsnews.com",
-  "snopes.com",
-  "factcheck.org",
-  "politifact.com",
-  "fullfact.org",
-  "polymarket.com",
-  "wikipedia.org",
-] as const;
+import {
+  DEFAULT_MODEL,
+  TRUSTED_DOMAINS,
+  MAX_TOOL_CALLS,
+  MAX_SOURCES,
+} from "@/src/lib/config";
 
 export const CorroborationSourceSchema = z.object({
   url: z.string().url(),
@@ -85,9 +63,6 @@ export const CorroborationResultSchema = z.object({
 export type CorroborationSource = z.infer<typeof CorroborationSourceSchema>;
 export type CorroborationResult = z.infer<typeof CorroborationResultSchema>;
 
-const MAX_TOOL_CALLS = 5;
-const MAX_SOURCES = 10;
-
 export async function corroboratePostcard(
   postcard: Postcard,
   originalMarkdown: string,
@@ -111,7 +86,7 @@ export async function corroboratePostcard(
   log(`Starting search grounding for ${postcard.platform} post...`);
 
   const { fullStream } = await streamText({
-    model: googleProvider("gemini-2.0-flash"),
+    model: googleProvider(DEFAULT_MODEL),
     tools: {
       google_search: googleProvider.tools.googleSearch({}),
     },
@@ -215,7 +190,7 @@ Use the google_search tool to execute your searches.`,
     .join("\n");
 
   const { text: verdictText } = await generateText({
-    model: googleProvider("gemini-2.0-flash"),
+    model: googleProvider(DEFAULT_MODEL),
     system: `You are a forensic media analyst. Based on the search results, provide a structured verdict about whether the social media post is TRUE, FALSE, or UNCERTAIN.
 
 IMPORTANT: Your job is to be CRITICAL and SKEPTICAL. Social media is full of misinformation. Consider:

@@ -38,7 +38,10 @@ function AnimatedPlaceholder() {
         className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none px-3"
         style={{ color: "var(--postal-ink-muted)" }}
       >
-        <span className="truncate text-sm" style={{ fontFamily: "var(--font-serif)" }}>
+        <span
+          className="truncate text-sm"
+          style={{ fontFamily: "var(--font-serif)" }}
+        >
           {PLACEHOLDER_URLS[index]}
         </span>
       </motion.span>
@@ -179,11 +182,17 @@ function AirmailAnimation({
             <div className="absolute top-4 right-4 flex gap-1">
               <div
                 className="w-5 h-5 border-2"
-                style={{ borderColor: "var(--postal-red)", borderRadius: "50%" }}
+                style={{
+                  borderColor: "var(--postal-red)",
+                  borderRadius: "50%",
+                }}
               />
               <div
                 className="w-5 h-5 border-2"
-                style={{ borderColor: "var(--postal-blue)", borderRadius: "50%" }}
+                style={{
+                  borderColor: "var(--postal-blue)",
+                  borderRadius: "50%",
+                }}
               />
             </div>
 
@@ -402,9 +411,7 @@ export function DropZone({
               }}
             />
             {/* Animated URL placeholder — only visible when input is unfocused and empty */}
-            {!isFocused && (
-              <AnimatedPlaceholder />
-            )}
+            {!isFocused && <AnimatedPlaceholder />}
           </div>
 
           {/* Submit button — solid, high-contrast */}
@@ -439,7 +446,8 @@ export function DropZone({
               color: "var(--postal-ink-muted)",
             }}
           >
-            x.com &nbsp;·&nbsp; bluesky &nbsp;·&nbsp; threads &nbsp;·&nbsp; reddit
+            x.com &nbsp;·&nbsp; bluesky &nbsp;·&nbsp; threads &nbsp;·&nbsp;
+            reddit
           </p>
         </div>
       </div>

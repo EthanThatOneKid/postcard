@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 import { db } from "@/src/db";
 import {
   postcards,
@@ -24,24 +24,26 @@ interface Props {
   }>;
 }
 
-async function getPostcardsByUrl(
-  url: string,
-): Promise<{ postcardRow: PostcardRow; postRow: PostRow } | null> {
-  const normalized = normalizePostUrl(url);
-  const result = await db
-    .select()
-    .from(postcards)
-    .innerJoin(posts, eq(posts.id, postcards.postId))
-    .where(eq(posts.url, normalized))
-    .orderBy(sql`${postcards.createdAt} DESC`)
-    .limit(1);
+const getPostcardsByUrl = cache(
+  async (
+    url: string,
+  ): Promise<{ postcardRow: PostcardRow; postRow: PostRow } | null> => {
+    const normalized = normalizePostUrl(url);
+    const result = await db
+      .select()
+      .from(postcards)
+      .innerJoin(posts, eq(posts.id, postcards.postId))
+      .where(eq(posts.url, normalized))
+      .orderBy(sql`${postcards.createdAt} DESC`)
+      .limit(1);
 
-  if (result.length === 0) return null;
-  return {
-    postcardRow: result[0].postcards,
-    postRow: result[0].posts,
-  };
-}
+    if (result.length === 0) return null;
+    return {
+      postcardRow: result[0].postcards,
+      postRow: result[0].posts,
+    };
+  },
+);
 
 export async function generateMetadata({ searchParams }: Props) {
   const { url: queryUrl } = await searchParams;
@@ -82,6 +84,16 @@ export async function generateMetadata({ searchParams }: Props) {
   return {
     title: `Postcard: ${verdictLabel} (${dbPostcard.postcardScore}/100)`,
     description: dbPostcard.summary || "View the full corroboration trace.",
+    openGraph: {
+      images: [
+        {
+          url: `/api/postcards/${dbPostcard.id}/og`,
+          width: 1200,
+          height: 630,
+          alt: `Postcard Forensic Report: ${verdictLabel}`,
+        },
+      ],
+    },
   };
 }
 

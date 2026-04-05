@@ -11,6 +11,8 @@ function getGoogleProvider(apiKey?: string) {
   return google;
 }
 
+import { DEFAULT_MODEL } from "@/src/lib/config";
+
 export const AuditResultSchema = z.object({
   originScore: z.number().min(0).max(1),
   temporalScore: z.number().min(0).max(1),
@@ -36,7 +38,7 @@ export async function auditPostcard(
   let temporalScore = 0;
 
   const { text } = await generateText({
-    model: googleProvider("gemini-2.0-flash"),
+    model: googleProvider(DEFAULT_MODEL),
     tools: { google_search: googleProvider.tools.googleSearch({}) },
     system: `You are the Forensic Auditor for Postcard. Given a source URL and post metadata, verify:
 1. Is the URL reachable and matches the platform?

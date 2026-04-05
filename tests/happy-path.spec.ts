@@ -8,9 +8,7 @@ test("happy path: submit post URL triggers analysis", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Postcard" })).toBeVisible();
 
-  const urlInput = page.getByPlaceholder(
-    "https://x.com/user/status/1234567890",
-  );
+  const urlInput = page.getByLabel("Enter social media post URL");
   await urlInput.fill(testUrl);
 
   const submitButton = page.getByRole("button", { name: "Trace Post" });

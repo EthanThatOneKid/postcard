@@ -4,9 +4,7 @@ test.describe("Interaction flows", () => {
   test("shows airmail animation after URL submission", async ({ page }) => {
     await page.goto("http://localhost:3000/postcards");
 
-    const urlInput = page.getByPlaceholder(
-      "https://x.com/user/status/1234567890",
-    );
+    const urlInput = page.getByLabel("Enter social media post URL");
     await urlInput.fill("https://www.instagram.com/p/DV9hesME3ka/");
 
     const submitButton = page.getByRole("button", { name: "Trace Post" });
@@ -21,9 +19,7 @@ test.describe("Interaction flows", () => {
   test("shows envelope stage in airmail animation", async ({ page }) => {
     await page.goto("http://localhost:3000/postcards");
 
-    const urlInput = page.getByPlaceholder(
-      "https://x.com/user/status/1234567890",
-    );
+    const urlInput = page.getByLabel("Enter social media post URL");
     await urlInput.fill("https://x.com/user/status/123");
 
     const submitButton = page.getByRole("button", { name: "Trace Post" });

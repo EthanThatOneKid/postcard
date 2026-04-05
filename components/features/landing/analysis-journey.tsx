@@ -42,11 +42,11 @@ const BOX_TOP_Y = 168; // 298 (ground) − 130 (box height)
 const PLANE_HOVER_Y = BOX_TOP_Y - 40 - 25; // 103 — plane bottom sits 25 SVG-units above box top
 
 const PLANE_TARGETS: Record<AnalysisStage, { x: number; y: number }> = {
-  0: { x: -110,                       y: PLANE_HOVER_Y }, // off-screen left, same altitude
-  1: { x: 0.22 * 1200 - 40,           y: PLANE_HOVER_Y }, // 224
-  2: { x: 0.50 * 1200 - 40,           y: PLANE_HOVER_Y }, // 560
-  3: { x: 0.78 * 1200 - 40,           y: PLANE_HOVER_Y }, // 896
-  4: { x: 1380,                        y: PLANE_HOVER_Y - 65 }, // fly away right + up
+  0: { x: -110, y: PLANE_HOVER_Y }, // off-screen left, same altitude
+  1: { x: 0.22 * 1200 - 40, y: PLANE_HOVER_Y }, // 224
+  2: { x: 0.5 * 1200 - 40, y: PLANE_HOVER_Y }, // 560
+  3: { x: 0.78 * 1200 - 40, y: PLANE_HOVER_Y }, // 896
+  4: { x: 1380, y: PLANE_HOVER_Y - 65 }, // fly away right + up
 };
 
 // ── Inline plane shape (scaled from viewBox 0 0 120 60 → 80×40 SVG units) ─
@@ -66,18 +66,27 @@ function PlaneShape() {
         strokeWidth="1.2"
       />
       <line
-        x1="0" y1="32" x2="82" y2="32"
+        x1="0"
+        y1="32"
+        x2="82"
+        y2="32"
         stroke="var(--postal-ink-muted)"
         strokeWidth="1"
       />
       <line
-        x1="30" y1="20" x2="75" y2="14"
+        x1="30"
+        y1="20"
+        x2="75"
+        y2="14"
         stroke="var(--postal-red)"
         strokeWidth="1.5"
         opacity="0.4"
       />
       <line
-        x1="30" y1="24" x2="75" y2="18"
+        x1="30"
+        y1="24"
+        x2="75"
+        y2="18"
         stroke="var(--postal-blue)"
         strokeWidth="1.5"
         opacity="0.4"
@@ -132,7 +141,10 @@ function CollectionBox({
 
       {/* Top highlight */}
       <ellipse
-        cx="48" cy="18" rx="44" ry="7"
+        cx="48"
+        cy="18"
+        rx="44"
+        ry="7"
         fill="none"
         stroke="rgba(255,255,255,0.15)"
         strokeWidth="2"
@@ -140,11 +152,22 @@ function CollectionBox({
 
       {/* Mail slot */}
       <rect x="18" y="40" width="60" height="6" rx="3" fill="#0f2d4a" />
-      <rect x="18" y="40" width="60" height="3" rx="1.5" fill="rgba(0,0,0,0.3)" />
+      <rect
+        x="18"
+        y="40"
+        width="60"
+        height="3"
+        rx="1.5"
+        fill="rgba(0,0,0,0.3)"
+      />
 
       {/* Status panel */}
       <rect
-        x="10" y="56" width="76" height="42" rx="3"
+        x="10"
+        y="56"
+        width="76"
+        height="42"
+        rx="3"
         fill="var(--postal-paper-2)"
         stroke="var(--postal-ink-faint)"
         strokeWidth="0.75"
@@ -182,7 +205,8 @@ function CollectionBox({
       </foreignObject>
 
       <text
-        x="48" y="106"
+        x="48"
+        y="106"
         textAnchor="middle"
         fontSize="5.5"
         fill="rgba(255,255,255,0.55)"
@@ -193,7 +217,14 @@ function CollectionBox({
       </text>
 
       {/* Left bevel */}
-      <rect x="0" y="22" width="4" height="84" rx="2" fill="rgba(255,255,255,0.12)" />
+      <rect
+        x="0"
+        y="22"
+        width="4"
+        height="84"
+        rx="2"
+        fill="rgba(255,255,255,0.12)"
+      />
     </g>
   );
 }
@@ -371,13 +402,19 @@ export function AnalysisJourney({
             >
               <p
                 className="text-lg font-bold"
-                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink)" }}
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink)",
+                }}
               >
                 Unable to Trace Post
               </p>
               <p
                 className="text-sm text-center max-w-md"
-                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink-muted)" }}
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                }}
               >
                 {error}
               </p>
@@ -437,13 +474,19 @@ export function AnalysisJourney({
             >
               <p
                 className="text-xs tracking-[0.2em] uppercase mb-0.5"
-                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink-muted)" }}
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                }}
               >
                 {stageLabel}
               </p>
               <p
                 className="text-sm italic"
-                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink)" }}
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink)",
+                }}
               >
                 {stageDetail}
               </p>
@@ -472,14 +515,15 @@ export function AnalysisJourney({
             transition={{ duration: 1.1, ease: EASE_OUT }}
           >
             <motion.g
-              animate={
-                stage < 4
-                  ? { y: [0, -10, 0] }
-                  : { y: 0 }
-              }
+              animate={stage < 4 ? { y: [0, -10, 0] } : { y: 0 }}
               transition={
                 stage < 4
-                  ? { duration: 2.6, repeat: Infinity, ease: "easeInOut", repeatType: "loop" }
+                  ? {
+                      duration: 2.6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      repeatType: "loop",
+                    }
                   : { duration: 0.3 }
               }
             >
@@ -529,9 +573,16 @@ export function AnalysisJourney({
                       : "drop-shadow(0 0 0px rgba(0,0,0,0))",
                   }}
                   transition={{ duration: 0.5, ease: EASE }}
-                  style={{ transformBox: "fill-box" as never, transformOrigin: "center" }}
+                  style={{
+                    transformBox: "fill-box" as never,
+                    transformOrigin: "center",
+                  }}
                 >
-                  <CollectionBox active={isActive} passed={isPassed} label={s.label} />
+                  <CollectionBox
+                    active={isActive}
+                    passed={isPassed}
+                    label={s.label}
+                  />
                 </motion.g>
               </g>
             );
@@ -541,4 +592,3 @@ export function AnalysisJourney({
     </div>
   );
 }
-

@@ -10,10 +10,7 @@ const AIRMAIL_BG = `repeating-linear-gradient(
 
 export function Footer() {
   return (
-    <footer
-      role="contentinfo"
-      style={{ background: "var(--postal-paper)" }}
-    >
+    <footer role="contentinfo" style={{ background: "var(--postal-paper)" }}>
       {/* Airmail stripe — top border of footer */}
       <div
         className="h-1.5"
@@ -22,9 +19,7 @@ export function Footer() {
       />
 
       {/* Hairline border below the stripe */}
-      <div
-        style={{ borderTop: "1px solid var(--postal-ink-faint)" }}
-      />
+      <div style={{ borderTop: "1px solid var(--postal-ink-faint)" }} />
 
       <div className="mx-auto max-w-5xl px-6 py-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Left — copyright + tagline */}
@@ -50,10 +45,7 @@ export function Footer() {
         </div>
 
         {/* Right — legal links */}
-        <nav
-          aria-label="Footer navigation"
-          className="flex items-center gap-5"
-        >
+        <nav aria-label="Footer navigation" className="flex items-center gap-5">
           <Link
             href="/privacy"
             className="text-[11px] tracking-[0.15em] uppercase transition-colors duration-100"
