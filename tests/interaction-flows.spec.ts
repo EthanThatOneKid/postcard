@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Interaction flows", () => {
   test("shows airmail animation after URL submission", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -20,7 +20,7 @@ test.describe("Interaction flows", () => {
   });
 
   test("Trace Another Post button reloads page", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -44,7 +44,7 @@ test.describe("Interaction flows", () => {
   });
 
   test("shows analysis journey after submission", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",

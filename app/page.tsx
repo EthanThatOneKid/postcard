@@ -65,7 +65,7 @@ export default function Home() {
           </p>
 
           <Link
-            href="/verify"
+            href="/postcards"
             className="inline-flex items-center gap-3 min-h-[44px] px-10 text-sm tracking-widest uppercase"
             style={{
               fontFamily: "var(--font-serif)",

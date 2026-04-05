@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Platform variations", () => {
   test("accepts X.com URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -18,7 +18,7 @@ test.describe("Platform variations", () => {
   });
 
   test("accepts twitter.com URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -36,7 +36,7 @@ test.describe("Platform variations", () => {
   });
 
   test("accepts Instagram URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -52,7 +52,7 @@ test.describe("Platform variations", () => {
   });
 
   test("accepts YouTube URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -68,7 +68,7 @@ test.describe("Platform variations", () => {
   });
 
   test("accepts Reddit URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -86,7 +86,7 @@ test.describe("Platform variations", () => {
   });
 
   test("accepts Bluesky URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",

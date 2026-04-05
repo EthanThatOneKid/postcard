@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Error cases", () => {
   test("shows error for empty input", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     await expect(page.getByRole("heading", { name: "Postcard" })).toBeVisible();
 
@@ -13,7 +13,7 @@ test.describe("Error cases", () => {
   });
 
   test("shows error for invalid URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -27,7 +27,7 @@ test.describe("Error cases", () => {
   });
 
   test("shows error for malformed URL", async ({ page }) => {
-    await page.goto("http://localhost:3000/verify");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",

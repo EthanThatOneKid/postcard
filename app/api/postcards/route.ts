@@ -3,9 +3,119 @@ import {
   processPostcardFromUrl,
   PostcardRequestSchema,
 } from "@/src/lib/postcard";
+import { db } from "@/src/db";
+import { analyses, posts } from "@/src/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { normalizePostUrl } from "@/src/lib/url";
+import type { Corroboration } from "@/src/lib/postcard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+
+async function getExistingAnalysis(url: string) {
+  const normalized = normalizePostUrl(url);
+  const result = await db
+    .select()
+    .from(analyses)
+    .innerJoin(posts, eq(posts.id, analyses.postId))
+    .where(eq(posts.url, normalized))
+    .orderBy(sql`${analyses.createdAt} DESC`)
+    .limit(1);
+
+  if (result.length === 0) return null;
+  return result[0];
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const url = request.nextUrl.searchParams.get("url");
+
+  if (!url) {
+    return NextResponse.json(
+      { error: "Missing required 'url' query parameter." },
+      { status: 400 },
+    );
+  }
+
+  const accept = request.headers.get("accept") || "";
+  const wantsJson = accept.includes("application/json");
+
+  try {
+    const normalized = normalizePostUrl(url);
+    const existing = await getExistingAnalysis(normalized);
+
+    if (existing) {
+      const { analyses: analysis, posts: post } = existing;
+      const report = {
+        postcard: {
+          platform: analysis.platform,
+          mainText: post.mainText || "",
+          username: post.username || undefined,
+          timestampText: post.timestampText || undefined,
+        },
+        markdown: post.markdown || "",
+        triangulation: {
+          targetUrl: analysis.url,
+          queries: [],
+        },
+        audit: {
+          originScore: analysis.originScore || 0,
+          temporalScore: analysis.temporalScore || 0,
+          totalScore: analysis.postcardScore / 100,
+          auditLog: JSON.parse((analysis.auditLog as string) || "[]"),
+        },
+        corroboration: {
+          primarySources: JSON.parse(
+            (analysis.primarySources as string) || "[]",
+          ),
+          queriesExecuted: JSON.parse(
+            (analysis.queriesExecuted as string) || "[]",
+          ),
+          verdict: analysis.verdict as Corroboration["verdict"],
+          summary: analysis.summary || "",
+          confidenceScore: analysis.confidenceScore || 0,
+          corroborationLog: JSON.parse(
+            (analysis.corroborationLog as string) || "[]",
+          ),
+        },
+        timestamp: analysis.createdAt.toISOString(),
+        analysisId: analysis.id,
+      };
+
+      if (wantsJson) {
+        return NextResponse.json(report);
+      }
+
+      return NextResponse.redirect(
+        new URL(
+          `/postcards?url=${encodeURIComponent(normalized)}`,
+          request.url,
+        ),
+      );
+    }
+
+    if (wantsJson) {
+      return NextResponse.json(
+        {
+          error:
+            "Analysis not found. POST to /api/postcards to initiate a new trace.",
+        },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.redirect(
+      new URL(
+        `/postcards?url=${encodeURIComponent(normalized)}&forceRefresh=true`,
+        request.url,
+      ),
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Analysis failed" },
+      { status: 500 },
+    );
+  }
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const traceId = crypto.randomUUID();
