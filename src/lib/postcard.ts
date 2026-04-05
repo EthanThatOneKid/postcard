@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db";
-import { analyses, posts } from "@/db/schema";
+import { postcards, posts } from "@/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { corroboratePostcard } from "./agents/corroborator";
 import { auditPostcard } from "./agents/verifier";
@@ -71,27 +71,27 @@ export async function updateAnalysisProgress(
   },
 ) {
   await db
-    .update(analyses)
+    .update(postcards)
     .set({
       ...updates,
       updatedAt: new Date(),
     })
-    .where(eq(analyses.id, analysisId));
+    .where(eq(postcards.id, analysisId));
 }
 
 export async function getExistingProcessingPostcard(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
-    .from(analyses)
-    .innerJoin(posts, eq(posts.id, analyses.postId))
+    .from(postcards)
+    .innerJoin(posts, eq(posts.id, postcards.postId))
     .where(
       and(
         eq(posts.url, normalized),
-        eq(analyses.status, "processing" as AnalysisStatus),
+        eq(postcards.status, "processing" as AnalysisStatus),
       ),
     )
-    .orderBy(sql`${analyses.createdAt} DESC`)
+    .orderBy(sql`${postcards.createdAt} DESC`)
     .limit(1);
   return result.length > 0 ? result[0] : null;
 }
@@ -121,7 +121,7 @@ export async function createPostcard(
     });
   }
 
-  await db.insert(analyses).values({
+  await db.insert(postcards).values({
     id: aId,
     postId: pId,
     url: normalized,
@@ -316,18 +316,18 @@ export async function processPostcardFromUrl(
     if (!forceRefresh) {
       const cachedAnalysis = await db
         .select()
-        .from(analyses)
+        .from(postcards)
         .innerJoin(posts, eq(posts.url, normalizedUrl))
-        .orderBy(sql`${analyses.createdAt} DESC`)
+        .orderBy(sql`${postcards.createdAt} DESC`)
         .limit(1);
 
       if (cachedAnalysis.length > 0) {
-        const analysis = cachedAnalysis[0].analyses;
+        const analysis = cachedAnalysis[0].postcards;
         if (analysis.status !== "processing") {
           await db
-            .update(analyses)
-            .set({ hits: sql`${analyses.hits} + 1` })
-            .where(eq(analyses.id, analysis.id));
+            .update(postcards)
+            .set({ hits: sql`${postcards.hits} + 1` })
+            .where(eq(postcards.id, analysis.id));
         }
 
         return {
@@ -489,14 +489,14 @@ export async function processPostcardFromUrl(
         // Check for existing analysis to update
         const existingAnalysis = await db
           .select()
-          .from(analyses)
-          .where(eq(analyses.postId, pId))
+          .from(postcards)
+          .where(eq(postcards.postId, pId))
           .limit(1);
 
         if (existingAnalysis.length > 0) {
           aId = existingAnalysis[0].id;
           await db
-            .update(analyses)
+            .update(postcards)
             .set({
               postcardScore,
               originScore: audit.originScore,
@@ -517,10 +517,10 @@ export async function processPostcardFromUrl(
               updatedAt: new Date(),
               createdAt: new Date(),
             })
-            .where(eq(analyses.id, aId));
+            .where(eq(postcards.id, aId));
         } else {
           aId = crypto.randomUUID();
-          await db.insert(analyses).values({
+          await db.insert(postcards).values({
             id: aId,
             postId: pId,
             url: normalizedUrl,
@@ -554,7 +554,7 @@ export async function processPostcardFromUrl(
         });
 
         aId = crypto.randomUUID();
-        await db.insert(analyses).values({
+        await db.insert(postcards).values({
           id: aId,
           postId: pId,
           url: normalizedUrl,

@@ -18,7 +18,7 @@ export const posts = sqliteTable("posts", {
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
 });
 
-export const analyses = sqliteTable("analyses", {
+export const postcards = sqliteTable("postcards", {
   id: text("id").primaryKey(),
   postId: text("post_id")
     .notNull()
@@ -55,5 +55,5 @@ export const analyses = sqliteTable("analyses", {
 
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
-export type Analysis = typeof analyses.$inferSelect;
-export type NewAnalysis = typeof analyses.$inferInsert;
+export type Postcard = typeof postcards.$inferSelect;
+export type NewPostcard = typeof postcards.$inferInsert;

@@ -7,7 +7,7 @@ import {
   updateAnalysisProgress,
 } from "@/src/lib/postcard";
 import { db } from "@/src/db";
-import { analyses, posts } from "@/src/db/schema";
+import { postcards, posts } from "@/src/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { normalizePostUrl } from "@/src/lib/url";
 import type { Corroboration } from "@/src/lib/postcard";
@@ -34,47 +34,47 @@ function corsRedirect(url: string): NextResponse {
   });
 }
 
-interface AnalysisWithPost {
-  analyses: typeof analyses.$inferSelect;
+interface PostcardWithPost {
+  postcards: typeof postcards.$inferSelect;
   posts: typeof posts.$inferSelect;
 }
 
-function buildReport(existing: AnalysisWithPost) {
-  const { analyses: analysis, posts: post } = existing;
+function buildReport(existing: PostcardWithPost) {
+  const { postcards: postcard, posts: post } = existing;
   const queriesExecuted = JSON.parse(
-    (analysis.queriesExecuted as string) ?? "[]",
+    (postcard.queriesExecuted as string) ?? "[]",
   ) as Array<{ query: string }>;
   return {
     postcard: {
-      platform: analysis.platform,
+      platform: postcard.platform,
       mainText: post.mainText ?? "",
       username: post.username ?? undefined,
       timestampText: post.timestampText ?? undefined,
     },
     markdown: post.markdown ?? "",
     triangulation: {
-      targetUrl: analysis.url,
+      targetUrl: postcard.url,
       queries: queriesExecuted.map((q) => q.query),
     },
     audit: {
-      originScore: analysis.originScore ?? 0,
-      temporalScore: analysis.temporalScore ?? 0,
-      totalScore: (analysis.postcardScore ?? 0) / 100,
-      auditLog: JSON.parse((analysis.auditLog as string) ?? "[]"),
+      originScore: postcard.originScore ?? 0,
+      temporalScore: postcard.temporalScore ?? 0,
+      totalScore: (postcard.postcardScore ?? 0) / 100,
+      auditLog: JSON.parse((postcard.auditLog as string) ?? "[]"),
     },
     corroboration: {
-      primarySources: JSON.parse((analysis.primarySources as string) ?? "[]"),
+      primarySources: JSON.parse((postcard.primarySources as string) ?? "[]"),
       queriesExecuted,
       verdict:
-        (analysis.verdict as Corroboration["verdict"]) ?? "insufficient_data",
-      summary: analysis.summary ?? "",
-      confidenceScore: analysis.confidenceScore ?? 0,
+        (postcard.verdict as Corroboration["verdict"]) ?? "insufficient_data",
+      summary: postcard.summary ?? "",
+      confidenceScore: postcard.confidenceScore ?? 0,
       corroborationLog: JSON.parse(
-        (analysis.corroborationLog as string) ?? "[]",
+        (postcard.corroborationLog as string) ?? "[]",
       ),
     },
-    timestamp: analysis.createdAt.toISOString(),
-    analysisId: analysis.id,
+    timestamp: postcard.createdAt.toISOString(),
+    analysisId: postcard.id,
   };
 }
 
@@ -82,14 +82,14 @@ async function getLatestAnalysisByUrl(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
-    .from(analyses)
-    .innerJoin(posts, eq(posts.id, analyses.postId))
+    .from(postcards)
+    .innerJoin(posts, eq(posts.id, postcards.postId))
     .where(eq(posts.url, normalized))
-    .orderBy(sql`${analyses.createdAt} DESC`)
+    .orderBy(sql`${postcards.createdAt} DESC`)
     .limit(1);
 
   if (result.length === 0) return null;
-  return result[0] as AnalysisWithPost;
+  return result[0] as PostcardWithPost;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { analyses: analysis } = existing;
+    const { postcards: analysis } = existing;
 
     if (analysis.status === "processing") {
       return corsResponse(
@@ -190,13 +190,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!forceRefresh) {
       const latest = await getLatestAnalysisByUrl(normalizedUrl);
       if (latest) {
-        const status = latest.analyses.status;
+        const status = latest.postcards.status;
 
         if (status === "processing") {
           const report = buildReport(latest);
           return corsResponse(
             {
-              postcardId: latest.analyses.id,
+              postcardId: latest.postcards.id,
               status: "processing",
               ...report,
             },
@@ -207,13 +207,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (status === "completed") {
           const report = buildReport(latest);
           await db
-            .update(analyses)
-            .set({ hits: sql`${analyses.hits} + 1` })
-            .where(eq(analyses.id, latest.analyses.id));
+            .update(postcards)
+            .set({ hits: sql`${postcards.hits} + 1` })
+            .where(eq(postcards.id, latest.postcards.id));
 
           return corsResponse(
             {
-              postcardId: latest.analyses.id,
+              postcardId: latest.postcards.id,
               status: "completed",
               ...report,
             },
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const report = buildReport(existingProcessing);
       return corsResponse(
         {
-          postcardId: existingProcessing.analyses.id,
+          postcardId: existingProcessing.postcards.id,
           status: "processing",
           ...report,
         },
@@ -239,11 +239,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (forceRefresh) {
       const latest = await getLatestAnalysisByUrl(normalizedUrl);
-      if (latest && latest.analyses.status === "completed") {
+      if (latest && latest.postcards.status === "completed") {
         await db
-          .update(analyses)
+          .update(postcards)
           .set({ status: "pending", deletedAt: new Date() })
-          .where(eq(analyses.id, latest.analyses.id));
+          .where(eq(postcards.id, latest.postcards.id));
       }
     }
 

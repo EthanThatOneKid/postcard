@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { db } from "@/src/db";
-import { analyses, posts } from "@/src/db/schema";
+import { postcards, posts } from "@/src/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { normalizePostUrl } from "@/src/lib/url";
 import PostcardsClient from "./postcards-client";
@@ -13,10 +13,10 @@ async function getAnalysisByUrl(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
-    .from(analyses)
-    .innerJoin(posts, eq(posts.id, analyses.postId))
+    .from(postcards)
+    .innerJoin(posts, eq(posts.id, postcards.postId))
     .where(eq(posts.url, normalized))
-    .orderBy(sql`${analyses.createdAt} DESC`)
+    .orderBy(sql`${postcards.createdAt} DESC`)
     .limit(1);
 
   if (result.length === 0) return null;
@@ -46,7 +46,7 @@ export async function generateMetadata({ searchParams }: Props) {
     };
   }
 
-  const { analyses: analysis } = data;
+  const { postcards: analysis } = data;
   const verdictMap = {
     verified: "✅ Verified",
     disputed: "❌ Disputed",
@@ -75,7 +75,7 @@ export default async function PostcardsPage({ searchParams }: Props) {
   if (normalizedUrl && !forceRefresh) {
     const data = await getAnalysisByUrl(normalizedUrl);
     if (data) {
-      const { analyses: analysis, posts: post } = data;
+      const { postcards: analysis, posts: post } = data;
       const queriesExecuted = JSON.parse(
         (analysis.queriesExecuted as string) || "[]",
       ) as Array<{ query: string; sourcesFound: number }>;
