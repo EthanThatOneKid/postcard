@@ -1,6 +1,7 @@
 # Postcard project summary
 
-> **Team:** Ethan (lead) + Yves  
+> **Submission:** [Devpost](https://devpost.com/software/postcard-bpx2mz)
+> **Team:** Ethan + Yves + Rohit  
 > **Event:** PantherHacks 2026 (April 3–5, 2026)  
 > **Track:** Cybersecurity  
 > **Repository:** `postcard`

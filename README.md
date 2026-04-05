@@ -1,5 +1,10 @@
 # Postcard
 
+[![Deploy on Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/postcardhq/postcard)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+
 > _Trace every post back to its source._
 
 ![Forensic Dashboard Mockup](./public/mockup.png)
@@ -9,6 +14,7 @@
 ## Hackathon submission
 
 **Track:** [Cybersecurity](https://pantherhacks2026.devpost.com/)  
+**Submission:** [Devpost](https://devpost.com/software/postcard-bpx2mz)  
 **Challenge:** Rebuilding trust in a "post-truth" digital era.  
 **Pitch Script:** [View Video Script](./PITCH.md)
 

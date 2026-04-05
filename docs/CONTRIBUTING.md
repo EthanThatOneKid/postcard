@@ -9,7 +9,7 @@ To set up the development environment, perform the following steps:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/EthanThatOneKid/postcard.git
+    git clone https://github.com/postcardhq/postcard.git
     cd postcard
     ```
 
