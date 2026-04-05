@@ -6,15 +6,21 @@ export class XPostClient implements UnifiedPostClient {
     return hostname.includes("x.com") || hostname.includes("twitter.com");
   }
 
-  async fetch(url: string): Promise<UnifiedPost> {
+  async fetch(
+    url: string,
+    onProgress?: (message: string) => void,
+  ): Promise<UnifiedPost> {
     // Twitter oEmbed API is official and requires no auth for public tweets
+    onProgress?.("Connecting to X/Twitter oEmbed API...");
     const oembedUrl = `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}`;
     const response = await fetch(oembedUrl);
 
     if (!response.ok) {
+      onProgress?.(`X oEmbed failed with status ${response.status}`);
       throw new Error(`X oEmbed failed: ${response.status}`);
     }
 
+    onProgress?.("Parsing X/Twitter post content...");
     const data = await response.json();
 
     // Data includes author_name, author_url, html (which contains the tweet text)

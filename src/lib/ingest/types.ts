@@ -11,5 +11,8 @@ export interface UnifiedPost {
 
 export interface UnifiedPostClient {
   canHandle(url: string): boolean;
-  fetch(url: string): Promise<UnifiedPost>;
+  fetch(
+    url: string,
+    onProgress?: (message: string) => void,
+  ): Promise<UnifiedPost>;
 }

@@ -81,7 +81,7 @@ Postcard caches forensic results at the **Resolved Post URL** level.
 
 ## Score logic
 
-The system combines subscores into a weighted percentage (0–100%) to provide a high-fidelity forensic verdict.
+The system combines subscores into a weighted percentage (0–100%) to provide a high-fidelity forensic verdict—where a lower score denotes greater unreliability and a higher score signifies a verified origin.
 
 ### Weighted formula
 

@@ -6,7 +6,11 @@ export class JinaPostClient implements UnifiedPostClient {
     return true;
   }
 
-  async fetch(url: string): Promise<UnifiedPost> {
+  async fetch(
+    url: string,
+    onProgress?: (message: string) => void,
+  ): Promise<UnifiedPost> {
+    onProgress?.("Connecting to Jina Reader API...");
     const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
     const response = await fetch(jinaUrl);
 

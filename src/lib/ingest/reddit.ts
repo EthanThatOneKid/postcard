@@ -6,17 +6,22 @@ export class RedditPostClient implements UnifiedPostClient {
     return hostname.includes("reddit.com");
   }
 
-  async fetch(url: string): Promise<UnifiedPost> {
-    // Ensure URL ends in .json to get structured data
+  async fetch(
+    url: string,
+    onProgress?: (message: string) => void,
+  ): Promise<UnifiedPost> {
+    onProgress?.("Fetching Reddit post JSON...");
     const jsonUrl = url.endsWith(".json")
       ? url
       : `${url.replace(/\/$/, "")}.json`;
 
     const response = await fetch(jsonUrl);
     if (!response.ok) {
-      throw new Error(`Reddit API failed: ${response.status}`);
+      onProgress?.(`Reddit fetch failed with status ${response.status}`);
+      throw new Error(`Reddit fetch failed: ${response.status}`);
     }
 
+    onProgress?.("Parsing Reddit post data...");
     const data = await response.json();
     const post = data[0].data.children[0].data;
 

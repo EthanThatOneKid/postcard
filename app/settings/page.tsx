@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/ui/navbar";
 import { Button } from "@/components/ui/button";
@@ -9,35 +8,47 @@ import { Button } from "@/components/ui/button";
 const STORAGE_KEY = "postcard_user_api_key";
 
 export default function SettingsPage() {
-  const [apiKey, setApiKey] = useState("");
-  const [hasApiKey, setHasApiKey] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [state, setState] = useState({
+    apiKey: "",
+    hasApiKey: false,
+    loading: true,
+    saved: false,
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setApiKey(stored);
-      setHasApiKey(true);
-    }
-    setLoading(false);
+    // Use setTimeout to avoid synchronous setState in effect (lint error: react-hooks/set-state-in-effect)
+    const timeoutId = setTimeout(() => {
+      setState((prev) => ({
+        ...prev,
+        apiKey: stored || "",
+        hasApiKey: !!stored,
+        loading: false,
+      }));
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const handleSave = () => {
-    const trimmed = apiKey.trim();
+    const trimmed = state.apiKey.trim();
     if (trimmed) {
       localStorage.setItem(STORAGE_KEY, trimmed);
-      setHasApiKey(true);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setState((prev) => ({
+        ...prev,
+        hasApiKey: true,
+        saved: true,
+      }));
+      setTimeout(() => setState((prev) => ({ ...prev, saved: false })), 2000);
     }
   };
 
   const handleClear = () => {
     localStorage.removeItem(STORAGE_KEY);
-    setApiKey("");
-    setHasApiKey(false);
+    setState((prev) => ({
+      ...prev,
+      apiKey: "",
+      hasApiKey: false,
+    }));
   };
 
   const handleTestApi = async () => {
@@ -58,7 +69,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
+  if (state.loading) {
     return (
       <>
         <Navbar />
@@ -106,20 +117,23 @@ export default function SettingsPage() {
           <div className="flex flex-col gap-3">
             <input
               type="password"
-              value={apiKey}
+              value={state.apiKey}
               onChange={(e) => {
-                setApiKey(e.target.value);
-                setHasApiKey(false);
+                setState((prev) => ({
+                  ...prev,
+                  apiKey: e.target.value,
+                  hasApiKey: false,
+                }));
               }}
               placeholder="Paste your Google AI API key here"
               className="w-full h-10 px-3 border border-input bg-transparent text-sm font-mono"
             />
 
             <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={!apiKey.trim()}>
-                {saved ? "Saved!" : "Save Key"}
+              <Button onClick={handleSave} disabled={!state.apiKey.trim()}>
+                {state.saved ? "Saved!" : "Save Key"}
               </Button>
-              {hasApiKey && (
+              {state.hasApiKey && (
                 <>
                   <Button variant="outline" onClick={handleTestApi}>
                     Test Key
@@ -131,7 +145,7 @@ export default function SettingsPage() {
               )}
             </div>
 
-            {hasApiKey && (
+            {state.hasApiKey && (
               <p className="text-xs text-green-600 dark:text-green-400">
                 API key is configured
               </p>

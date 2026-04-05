@@ -7,8 +7,8 @@ import {
   ShareNetwork,
   ArrowsClockwise,
 } from "@phosphor-icons/react";
-import type { PostcardReport } from "@/src/lib/postcard";
-import { ScoreDisplay, MetaStamps, ScoreGauge } from "./score-display";
+import type { PostcardReport } from "@/src/api/schemas";
+import { ScoreDisplay, MetaStamps } from "./score-display";
 import { TravelTimeline } from "./timeline";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -26,13 +26,11 @@ function ReportActions({
   onShare,
   onReverify,
   onHome,
-  targetUrl,
 }: {
   copied: boolean;
   onShare: () => void;
   onReverify: () => void;
   onHome: () => void;
-  targetUrl?: string;
 }) {
   return (
     <div className="flex flex-wrap justify-center gap-4">
@@ -230,7 +228,6 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             onShare={handleShare}
             onReverify={handleReverify}
             onHome={handleHome}
-            targetUrl={triangulation.targetUrl}
           />
         </motion.div>
       </div>

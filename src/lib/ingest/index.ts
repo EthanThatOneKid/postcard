@@ -16,21 +16,25 @@ export class UnifiedPostStrategy {
     new JinaPostClient(), // Fallback
   ];
 
-  async fetch(url: string): Promise<UnifiedPost> {
+  async fetch(
+    url: string,
+    onProgress?: (message: string) => void,
+  ): Promise<UnifiedPost> {
     const client = this.clients.find((c) => c.canHandle(url));
     if (!client) {
       throw new Error(`No client found for URL: ${url}`);
     }
 
     try {
-      return await client.fetch(url);
+      return await client.fetch(url, onProgress);
     } catch (error) {
       console.warn(
         `Primary client (${client.constructor.name}) failed. Falling back to Jina...`,
         error,
       );
       if (client instanceof JinaPostClient) throw error;
-      return new JinaPostClient().fetch(url);
+      onProgress?.("Falling back to Jina Post Client...");
+      return new JinaPostClient().fetch(url, onProgress);
     }
   }
 }

@@ -1,168 +1,153 @@
-import { NextRequest, NextResponse } from "next/server";
-import {
-  processPostcardFromUrl,
-  PostcardRequestSchema,
-  getExistingProcessingPostcard,
-  createPostcard,
-  updatePostcardRow,
-} from "@/src/lib/postcard";
+import { NextResponse } from "next/server";
 import { db } from "@/src/db";
 import { postcards, posts } from "@/src/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import {
+  PostcardRequestSchema,
+  PostcardResponseSchema,
+} from "@/src/api/schemas";
 import { normalizePostUrl } from "@/src/lib/url";
-import type { Corroboration } from "@/src/lib/postcard";
-
-export const runtime = "nodejs";
-export const maxDuration = 120;
+import {
+  createPostcard,
+  getExistingProcessingPostcard,
+  processPostcardFromUrl,
+} from "@/src/lib/postcard";
+import { dbRowToReport } from "@/src/api/conversions";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept",
+  "Access-Control-Allow-Headers": "Content-Type, x-api-key",
 };
 
-function corsResponse(body: unknown, status: number): NextResponse {
-  return NextResponse.json(body, { status, headers: CORS_HEADERS });
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: CORS_HEADERS });
 }
 
-function corsRedirect(url: string): NextResponse {
-  return NextResponse.redirect(url, {
-    headers: {
-      ...CORS_HEADERS,
-      Location: url,
-    },
-  });
-}
-
-interface PostcardWithPost {
-  postcards: typeof postcards.$inferSelect;
-  posts: typeof posts.$inferSelect;
-}
-
-function buildReport(existing: PostcardWithPost) {
-  const { postcards: postcard, posts: post } = existing;
-  const queriesExecuted = JSON.parse(
-    (postcard.queriesExecuted as string) ?? "[]",
-  ) as Array<{ query: string }>;
-  return {
-    postcard: {
-      platform: postcard.platform,
-      mainText: post.mainText ?? "",
-      username: post.username ?? undefined,
-      timestampText: post.timestampText ?? undefined,
-    },
-    markdown: post.markdown ?? "",
-    triangulation: {
-      targetUrl: postcard.url,
-      queries: queriesExecuted.map((q) => q.query),
-    },
-    audit: {
-      originScore: postcard.originScore ?? 0,
-      temporalScore: postcard.temporalScore ?? 0,
-      totalScore: (postcard.postcardScore ?? 0) / 100,
-      auditLog: JSON.parse((postcard.auditLog as string) ?? "[]"),
-    },
-    corroboration: {
-      primarySources: JSON.parse((postcard.primarySources as string) ?? "[]"),
-      queriesExecuted,
-      verdict:
-        (postcard.verdict as Corroboration["verdict"]) ?? "insufficient_data",
-      summary: postcard.summary ?? "",
-      confidenceScore: postcard.confidenceScore ?? 0,
-      corroborationLog: JSON.parse(
-        (postcard.corroborationLog as string) ?? "[]",
-      ),
-    },
-    timestamp: postcard.createdAt.toISOString(),
-    id: postcard.id,
-  };
-}
-
-async function getLatestAnalysisByUrl(url: string) {
-  const normalized = normalizePostUrl(url);
-  const result = await db
-    .select()
-    .from(postcards)
-    .innerJoin(posts, eq(posts.id, postcards.postId))
-    .where(eq(posts.url, normalized))
-    .orderBy(sql`${postcards.createdAt} DESC`)
-    .limit(1);
-
-  if (result.length === 0) return null;
-  return result[0] as PostcardWithPost;
-}
-
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  const url = request.nextUrl.searchParams.get("url");
-
-  if (!url) {
-    return corsResponse(
-      { error: "Missing required 'url' query parameter." },
-      400,
-    );
-  }
-
+export async function GET(request: Request) {
   try {
-    const normalized = normalizePostUrl(url);
-    const existing = await getLatestAnalysisByUrl(normalized);
+    const { searchParams } = new URL(request.url);
+    const url = searchParams.get("url");
 
-    if (!existing) {
-      return corsResponse(
-        {
-          status: "not_found",
-          error:
-            "Analysis not found. POST to /api/postcards to initiate a new trace.",
-        },
-        404,
+    if (!url) {
+      return NextResponse.json(
+        { error: "URL parameter is required" },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
-    const { postcards: row } = existing;
+    const normalizedUrl = normalizePostUrl(url);
+    const result = await db
+      .select()
+      .from(postcards)
+      .innerJoin(posts, eq(posts.url, normalizedUrl))
+      .orderBy(sql`${postcards.createdAt} DESC`)
+      .limit(1);
 
-    if (row.status === "processing") {
-      return corsResponse(
-        {
-          status: row.status,
-          stage: row.stage,
-          message: row.message,
-          progress: row.progress,
-        },
-        200,
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: "Postcard not found" },
+        { status: 404, headers: CORS_HEADERS },
       );
     }
 
-    if (row.status === "completed") {
-      const report = buildReport(existing);
-      return corsResponse(
-        {
-          status: row.status,
-          ...report,
-        },
-        200,
-      );
-    }
+    const { postcards: row, posts: post } = result[0];
+    const report = dbRowToReport(row, post);
 
-    if (row.status === "failed") {
-      return corsResponse(
-        {
-          status: row.status,
-          error: row.error,
-        },
-        200,
-      );
-    }
-
-    return corsResponse({ error: "Unknown row status" }, 500);
+    return NextResponse.json(
+      PostcardResponseSchema.parse({
+        url: normalizedUrl,
+        markdown: post.markdown || "",
+        platform: row.platform || "Other",
+        corroboration: report.corroboration,
+        postcardScore: row.postcardScore / 100,
+        timestamp: row.createdAt.toISOString(),
+        id: row.id,
+        forensicReport: report,
+      }),
+      { headers: CORS_HEADERS },
+    );
   } catch (error) {
-    return corsResponse(
-      { error: error instanceof Error ? error.message : "Postcard failed" },
-      500,
+    console.error("API GET Error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }
 
-export async function OPTIONS(): Promise<NextResponse> {
-  return new NextResponse(null, {
-    headers: CORS_HEADERS,
-  });
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { url, userApiKey, refresh } = PostcardRequestSchema.parse(body);
+    const normalizedUrl = normalizePostUrl(url);
+
+    if (!refresh) {
+      // 1. Check for active/processing jobs to avoid double-processing
+      const processing = await getExistingProcessingPostcard(normalizedUrl);
+      if (processing) {
+        return NextResponse.json(
+          {
+            status: "processing",
+            id: processing.postcards.id,
+            message: "An analysis for this URL is already in progress.",
+          },
+          { status: 202, headers: CORS_HEADERS },
+        );
+      }
+
+      // 2. Check for completed cached analysis
+      const existingResult = await db
+        .select()
+        .from(postcards)
+        .innerJoin(posts, eq(posts.url, normalizedUrl))
+        .orderBy(sql`${postcards.createdAt} DESC`)
+        .limit(1);
+
+      if (existingResult.length > 0) {
+        const { postcards: row, posts: post } = existingResult[0];
+        if (row.status === "completed") {
+          const report = dbRowToReport(row, post);
+          return NextResponse.json(
+            PostcardResponseSchema.parse({
+              url: normalizedUrl,
+              markdown: post.markdown || "",
+              platform: row.platform || "Other",
+              corroboration: report.corroboration,
+              postcardScore: row.postcardScore / 100,
+              timestamp: row.createdAt.toISOString(),
+              id: row.id,
+              forensicReport: report,
+            }),
+            { headers: CORS_HEADERS },
+          );
+        }
+      }
+    }
+
+    // 3. Start fresh analysis
+    const { id } = await createPostcard(normalizedUrl);
+
+    // We don't await the full pipeline in the HTTP request to avoid timeouts
+    processPostcardFromUrl(normalizedUrl, userApiKey, () => {}, true, id).catch(
+      (err) => console.error("Background trace failed:", err),
+    );
+
+    return NextResponse.json(
+      {
+        status: "processing",
+        id,
+        message: "Forensic trace initialized.",
+      },
+      { status: 202, headers: CORS_HEADERS },
+    );
+  } catch (error) {
+    console.error("API Error:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Internal Server Error",
+      },
+      { status: 400, headers: CORS_HEADERS },
+    );
+  }
 }

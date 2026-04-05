@@ -6,7 +6,10 @@ export class YoutubePostClient implements UnifiedPostClient {
     return hostname.includes("youtube.com") || hostname.includes("youtu.be");
   }
 
-  async fetch(url: string): Promise<UnifiedPost> {
+  async fetch(
+    url: string,
+    onProgress?: (message: string) => void,
+  ): Promise<UnifiedPost> {
     const isCommunity = url.includes("/community") || url.includes("/channel/");
 
     if (isCommunity) {
@@ -18,13 +21,16 @@ export class YoutubePostClient implements UnifiedPostClient {
     }
 
     // For videos, we use oEmbed as a reliable starting point
+    onProgress?.("Fetching YouTube oEmbed data...");
     const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
     const response = await fetch(oembedUrl);
 
     if (!response.ok) {
+      onProgress?.(`YouTube oEmbed failed with status ${response.status}`);
       throw new Error(`YouTube oEmbed failed: ${response.status}`);
     }
 
+    onProgress?.("Parsing YouTube metadata...");
     const data = await response.json();
 
     return {

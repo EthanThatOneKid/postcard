@@ -1,6 +1,5 @@
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
-import { z } from "zod";
 
 export const posts = sqliteTable("posts", {
   id: text("id").primaryKey(),
@@ -54,49 +53,7 @@ export const postcards = sqliteTable("postcards", {
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
 });
 
-export const PostSchema = z.object({
-  id: z.string(),
-  url: z.string(),
-  platform: z.string().nullable(),
-  markdown: z.string().nullable(),
-  username: z.string().nullable(),
-  timestampText: z.string().nullable(),
-  mainText: z.string().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
-});
-
-export type Post = z.infer<typeof PostSchema>;
-export type NewPost = z.infer<typeof PostSchema>;
-
-export const PostcardDb = z.object({
-  id: z.string(),
-  postId: z.string(),
-  url: z.string(),
-  platform: z.string().nullable(),
-  postcardScore: z.number(),
-  originScore: z.number().nullable(),
-  corroborationScore: z.number().nullable(),
-  biasScore: z.number().nullable(),
-  temporalScore: z.number().nullable(),
-  verdict: z.string().nullable(),
-  summary: z.string().nullable(),
-  confidenceScore: z.number().nullable(),
-  primarySources: z.string().nullable(),
-  queriesExecuted: z.string().nullable(),
-  corroborationLog: z.string().nullable(),
-  auditLog: z.string().nullable(),
-  hits: z.number(),
-  status: z.string(),
-  progress: z.number().nullable(),
-  stage: z.string().nullable(),
-  message: z.string().nullable(),
-  error: z.string().nullable(),
-  startedAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
-});
-
-export type PostcardDb = z.infer<typeof PostcardDb>;
+export type PostRow = typeof posts.$inferSelect;
+export type NewPostRow = typeof posts.$inferInsert;
+export type PostcardRow = typeof postcards.$inferSelect;
+export type NewPostcardRow = typeof postcards.$inferInsert;

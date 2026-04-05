@@ -1,16 +1,32 @@
 import { Suspense } from "react";
 import { db } from "@/src/db";
-import { postcards, posts, PostcardDb } from "@/src/db/schema";
+import {
+  postcards,
+  posts,
+  type PostcardRow,
+  type PostRow,
+} from "@/src/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { normalizePostUrl } from "@/src/lib/url";
-import { createPostcard, processPostcardFromUrl } from "@/src/lib/postcard";
+import {
+  createPostcard,
+  processPostcardFromUrl,
+  incrementPostcardHits,
+} from "@/src/lib/postcard";
+import { dbRowToReport } from "@/src/api/conversions";
 import PostcardsClient from "./postcards-client";
 
 interface Props {
-  searchParams: Promise<{ url?: string; forceRefresh?: string }>;
+  searchParams: Promise<{
+    url?: string;
+    refresh?: string;
+    replay?: string;
+  }>;
 }
 
-async function getPostcardsByUrl(url: string) {
+async function getPostcardsByUrl(
+  url: string,
+): Promise<{ postcardRow: PostcardRow; postRow: PostRow } | null> {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
@@ -21,10 +37,9 @@ async function getPostcardsByUrl(url: string) {
     .limit(1);
 
   if (result.length === 0) return null;
-  const { postcards: rawPostcard, posts: rawPost } = result[0];
   return {
-    postcardRow: PostcardDb.parse(rawPostcard),
-    postRow: rawPost,
+    postcardRow: result[0].postcards,
+    postRow: result[0].posts,
   };
 }
 
@@ -51,7 +66,7 @@ export async function generateMetadata({ searchParams }: Props) {
     };
   }
 
-  const dbPostcard = data.postcardRow;
+  const { postcardRow: dbPostcard } = data;
   const verdictMap = {
     verified: "✅ Verified",
     disputed: "❌ Disputed",
@@ -61,7 +76,8 @@ export async function generateMetadata({ searchParams }: Props) {
 
   const verdictLabel =
     verdictMap[dbPostcard.verdict as keyof typeof verdictMap] ??
-    dbPostcard.verdict;
+    dbPostcard.verdict ??
+    "Processing";
 
   return {
     title: `Postcard: ${verdictLabel} (${dbPostcard.postcardScore}/100)`,
@@ -70,64 +86,29 @@ export async function generateMetadata({ searchParams }: Props) {
 }
 
 export default async function PostcardsPage({ searchParams }: Props) {
-  const { url: queryUrl, forceRefresh } = await searchParams;
+  const { url: queryUrl, refresh, replay } = await searchParams;
 
   const decodedUrl = queryUrl ? decodeURIComponent(queryUrl) : null;
   const normalizedUrl = decodedUrl ? normalizePostUrl(decodedUrl) : null;
+  const shouldRefresh = refresh === "true";
+  const shouldReplay = replay === "true";
 
   let initialReport = null;
   let processingUrl = null;
 
-  if (normalizedUrl && !forceRefresh) {
+  if (normalizedUrl && !shouldRefresh) {
     const data = await getPostcardsByUrl(normalizedUrl);
     if (data) {
-      const queriesExecuted = JSON.parse(
-        data.postcardRow.queriesExecuted ?? "[]",
-      );
-      initialReport = {
-        postcard: {
-          platform:
-            (data.postcardRow.platform as
-              | "X"
-              | "YouTube"
-              | "Reddit"
-              | "Instagram"
-              | "Other") || "Other",
-          mainText: data.postRow.mainText || "",
-          username: data.postRow.username || undefined,
-          timestampText: data.postRow.timestampText || undefined,
-        },
-        markdown: data.postRow.markdown || "",
-        triangulation: {
-          targetUrl: data.postcardRow.url,
-          queries: queriesExecuted.map((q: { query: string }) => q.query),
-        },
-        audit: {
-          originScore: data.postcardRow.originScore ?? 0,
-          temporalScore: data.postcardRow.temporalScore ?? 0,
-          totalScore: data.postcardRow.postcardScore / 100,
-          auditLog: JSON.parse(data.postcardRow.auditLog ?? "[]"),
-        },
-        corroboration: {
-          primarySources: JSON.parse(data.postcardRow.primarySources ?? "[]"),
-          queriesExecuted,
-          verdict:
-            (data.postcardRow.verdict as
-              | "verified"
-              | "disputed"
-              | "inconclusive"
-              | "insufficient_data") ?? "insufficient_data",
-          summary: data.postcardRow.summary ?? "",
-          confidenceScore: data.postcardRow.confidenceScore ?? 0,
-          corroborationLog: JSON.parse(
-            data.postcardRow.corroborationLog ?? "[]",
-          ),
-        },
-        timestamp: data.postcardRow.createdAt.toISOString(),
-        id: data.postcardRow.id,
-      };
+      initialReport = dbRowToReport(data.postcardRow, data.postRow);
+      // Increment hit counter on every view of a completed report
+      if (data.postcardRow.status === "completed") {
+        incrementPostcardHits(data.postcardRow.id).catch(console.error);
+      }
     }
-  } else if (normalizedUrl && forceRefresh) {
+  }
+
+  // If we have a URL but no report (either new or refresh), start processing
+  if (normalizedUrl && (!initialReport || shouldRefresh)) {
     const { id } = await createPostcard(normalizedUrl);
     processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
       console.error,
@@ -141,6 +122,7 @@ export default async function PostcardsPage({ searchParams }: Props) {
         initialUrl={normalizedUrl}
         initialReport={initialReport}
         processingUrl={processingUrl}
+        shouldReplay={shouldReplay}
       />
     </Suspense>
   );
