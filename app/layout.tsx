@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, EB_Garamond } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Navbar } from "@/components/ui/Navbar";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
         className="min-h-full flex flex-col"
         style={{ background: "var(--postal-paper)" }}
       >
+        <Navbar />
         {children}
       </body>
     </html>

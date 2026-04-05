@@ -298,7 +298,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 </span>
               </p>
               <p
-                className="mt-1.5 text-xs font-semibold tracking-wide"
+                className="mt-1.5 text-sm font-semibold tracking-wide"
                 style={{ color }}
               >
                 {verdict}
@@ -399,15 +399,15 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 href={triangulation.targetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all text-xs underline underline-offset-2"
+                className="break-all text-sm underline underline-offset-2"
                 style={{ color: "var(--postal-blue)" }}
               >
                 {triangulation.targetUrl}
               </a>
             ) : (
               <p
-                className="text-xs italic"
-                style={{ color: "var(--postal-ink-faint)" }}
+                className="text-sm italic"
+                style={{ color: "var(--postal-ink-muted)" }}
               >
                 Point of Origin Obscured
               </p>
@@ -619,8 +619,8 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <p
-                    className="text-xs leading-relaxed"
-                    style={{ color: "var(--postal-ink-muted)" }}
+                    className="text-sm leading-relaxed"
+                    style={{ color: "var(--postal-ink)" }}
                   >
                     {entry}
                   </p>
@@ -672,10 +672,10 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
           transition={{ delay: 1.2, duration: 0.4 }}
         >
           <button
-            className="flex items-center gap-2 text-xs tracking-widest uppercase px-6 py-2 cursor-pointer transition-colors"
+            className="text-sm tracking-widest uppercase px-6 cursor-pointer inline-flex items-center justify-center min-h-[44px]"
             style={{
               fontFamily: "var(--font-serif)",
-              color: "var(--postal-ink-muted)",
+              color: "var(--postal-ink)",
               border: "1px solid var(--postal-ink-faint)",
               background: "var(--postal-paper)",
             }}
