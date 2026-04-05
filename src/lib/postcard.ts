@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db";
 import { analyses, posts } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { corroboratePostcard } from "./agents/corroborator";
 import { auditPostcard } from "./agents/verifier";
 import { unifiedPostClient } from "./ingest";
@@ -12,6 +12,85 @@ export type ProgressCallback = (
   message: string,
   progress: number,
 ) => void;
+
+export type AnalysisStatus = "pending" | "processing" | "completed" | "failed";
+
+export async function updateAnalysisProgress(
+  analysisId: string,
+  updates: {
+    stage?: string;
+    message?: string;
+    progress?: number;
+    status?: AnalysisStatus;
+    error?: string;
+  },
+) {
+  await db
+    .update(analyses)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(eq(analyses.id, analysisId));
+}
+
+export async function getExistingProcessingJob(url: string) {
+  const normalized = normalizePostUrl(url);
+  const result = await db
+    .select()
+    .from(analyses)
+    .innerJoin(posts, eq(posts.id, analyses.postId))
+    .where(
+      and(
+        eq(posts.url, normalized),
+        eq(analyses.status, "processing" as AnalysisStatus),
+      ),
+    )
+    .orderBy(sql`${analyses.createdAt} DESC`)
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function createProcessingJob(
+  url: string,
+  forceRefresh?: boolean,
+): Promise<{ postId: string; analysisId: string }> {
+  const normalized = normalizePostUrl(url);
+
+  let pId: string;
+  const aId = crypto.randomUUID();
+
+  const existingPost = await db
+    .select()
+    .from(posts)
+    .where(eq(posts.url, normalized))
+    .limit(1);
+
+  if (existingPost.length > 0) {
+    pId = existingPost[0].id;
+  } else {
+    pId = crypto.randomUUID();
+    await db.insert(posts).values({
+      id: pId,
+      url: normalized,
+    });
+  }
+
+  await db.insert(analyses).values({
+    id: aId,
+    postId: pId,
+    url: normalized,
+    platform: "Other",
+    postcardScore: 0,
+    status: "processing",
+    progress: 0,
+    stage: "starting",
+    message: "Initializing analysis...",
+    startedAt: new Date(),
+  });
+
+  return { postId: pId, analysisId: aId };
+}
 
 export const PostcardSchema = z.object({
   username: z.string().optional().describe("User handle (e.g. '@elonmusk')"),
@@ -154,14 +233,19 @@ export async function processPostcardFromUrl(
   userApiKey?: string,
   onProgress?: ProgressCallback,
   forceRefresh?: boolean,
+  analysisId?: string,
 ): Promise<PostcardResponse & { analysisId?: string }> {
   const normalizedUrl = normalizePostUrl(url);
-  const progress = (stage: string, message: string, p: number) => {
+
+  const updateProgress = async (stage: string, message: string, p: number) => {
     onProgress?.(stage, message, p);
+    if (analysisId) {
+      await updateAnalysisProgress(analysisId, { stage, message, progress: p });
+    }
   };
 
   if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
-    progress("complete", "Mock postcard complete", 1);
+    await updateProgress("complete", "Mock postcard complete", 1);
     return { ...MOCK_POSTCARD_RESPONSE };
   }
 
@@ -176,10 +260,12 @@ export async function processPostcardFromUrl(
 
       if (cachedAnalysis.length > 0) {
         const analysis = cachedAnalysis[0].analyses;
-        await db
-          .update(analyses)
-          .set({ hits: sql`${analyses.hits} + 1` })
-          .where(eq(analyses.id, analysis.id));
+        if (analysis.status !== "processing") {
+          await db
+            .update(analyses)
+            .set({ hits: sql`${analyses.hits} + 1` })
+            .where(eq(analyses.id, analysis.id));
+        }
 
         return {
           url: normalizedUrl,
@@ -208,7 +294,11 @@ export async function processPostcardFromUrl(
       }
     }
 
-    progress("scraping", "Fetching content via UnifiedPostClient...", 0.1);
+    await updateProgress(
+      "scraping",
+      "Fetching content via UnifiedPostClient...",
+      0.1,
+    );
     const post = await unifiedPostClient.fetch(url);
     const markdown = post.markdown;
 
@@ -250,10 +340,18 @@ export async function processPostcardFromUrl(
       };
     }
 
-    progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
+    await updateProgress(
+      "scraped",
+      `Fetched ${markdown.length} characters`,
+      0.3,
+    );
 
     const platform = post.platform;
-    progress("corroborating", "Searching for primary sources...", 0.4);
+    await updateProgress(
+      "corroborating",
+      "Searching for primary sources...",
+      0.4,
+    );
 
     const postcard: Postcard = {
       platform: platform as Postcard["platform"],
@@ -265,12 +363,16 @@ export async function processPostcardFromUrl(
     const corroboration = await corroboratePostcard(
       postcard,
       markdown,
-      (msg: string) => {
-        progress("corroborating", msg, 0.5);
+      async (msg: string) => {
+        await updateProgress("corroborating", msg, 0.5);
       },
     );
 
-    progress("auditing", "Verifying origin and temporal alignment...", 0.7);
+    await updateProgress(
+      "auditing",
+      "Verifying origin and temporal alignment...",
+      0.7,
+    );
     const audit = await auditPostcard(normalizedUrl, postcard);
 
     const corroborationScore = corroboration.confidenceScore;
@@ -280,7 +382,7 @@ export async function processPostcardFromUrl(
     const totalSources = corroboration.primarySources.length;
     const biasScore = totalSources > 0 ? supportingSources / totalSources : 0.5;
 
-    progress("scoring", "Calculating Postcard score...", 0.9);
+    await updateProgress("scoring", "Calculating Postcard score...", 0.9);
 
     const WEIGHTS = {
       ORIGIN: 0.3,
@@ -307,6 +409,7 @@ export async function processPostcardFromUrl(
         .limit(1);
 
       let pId: string;
+      let aId: string;
       if (existingPost.length > 0) {
         pId = existingPost[0].id;
         // Update the post content just in case it changed
@@ -327,6 +430,7 @@ export async function processPostcardFromUrl(
           .limit(1);
 
         if (existingAnalysis.length > 0) {
+          aId = existingAnalysis[0].id;
           await db
             .update(analyses)
             .set({
@@ -343,13 +447,17 @@ export async function processPostcardFromUrl(
               corroborationLog: JSON.stringify(corroboration.corroborationLog),
               auditLog: JSON.stringify(audit.auditLog),
               status: "completed",
+              progress: 1,
+              stage: "complete",
+              message: "Analysis complete",
               updatedAt: new Date(),
               createdAt: new Date(),
             })
-            .where(eq(analyses.id, existingAnalysis[0].id));
+            .where(eq(analyses.id, aId));
         } else {
+          aId = crypto.randomUUID();
           await db.insert(analyses).values({
-            id: crypto.randomUUID(),
+            id: aId,
             postId: pId,
             url: normalizedUrl,
             platform,
@@ -366,6 +474,9 @@ export async function processPostcardFromUrl(
             corroborationLog: JSON.stringify(corroboration.corroborationLog),
             auditLog: JSON.stringify(audit.auditLog),
             status: "completed",
+            progress: 1,
+            stage: "complete",
+            message: "Analysis complete",
           });
         }
       } else {
@@ -378,8 +489,9 @@ export async function processPostcardFromUrl(
           mainText: markdown.slice(0, 500),
         });
 
+        aId = crypto.randomUUID();
         await db.insert(analyses).values({
-          id: crypto.randomUUID(),
+          id: aId,
           postId: pId,
           url: normalizedUrl,
           platform,
@@ -396,17 +508,13 @@ export async function processPostcardFromUrl(
           corroborationLog: JSON.stringify(corroboration.corroborationLog),
           auditLog: JSON.stringify(audit.auditLog),
           status: "completed",
+          progress: 1,
+          stage: "complete",
+          message: "Analysis complete",
         });
       }
-      const aId = (
-        await db
-          .select()
-          .from(analyses)
-          .where(eq(analyses.postId, pId))
-          .limit(1)
-      )[0]?.id;
 
-      progress("complete", "Postcard complete", 1);
+      await updateProgress("complete", "Postcard complete", 1);
 
       return PostcardResponseSchema.parse({
         url: normalizedUrl,

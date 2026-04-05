@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   processPostcardFromUrl,
   PostcardRequestSchema,
+  getExistingProcessingJob,
+  createProcessingJob,
+  updateAnalysisProgress,
 } from "@/src/lib/postcard";
 import { db } from "@/src/db";
 import { analyses, posts } from "@/src/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { normalizePostUrl } from "@/src/lib/url";
 import type { Corroboration } from "@/src/lib/postcard";
 
@@ -31,7 +34,51 @@ function corsRedirect(url: string): NextResponse {
   });
 }
 
-async function getExistingAnalysis(url: string) {
+interface AnalysisWithPost {
+  analyses: typeof analyses.$inferSelect;
+  posts: typeof posts.$inferSelect;
+}
+
+function buildReport(existing: AnalysisWithPost) {
+  const { analyses: analysis, posts: post } = existing;
+  const queriesExecuted = JSON.parse(
+    (analysis.queriesExecuted as string) ?? "[]",
+  ) as Array<{ query: string }>;
+  return {
+    postcard: {
+      platform: analysis.platform,
+      mainText: post.mainText ?? "",
+      username: post.username ?? undefined,
+      timestampText: post.timestampText ?? undefined,
+    },
+    markdown: post.markdown ?? "",
+    triangulation: {
+      targetUrl: analysis.url,
+      queries: queriesExecuted.map((q) => q.query),
+    },
+    audit: {
+      originScore: analysis.originScore ?? 0,
+      temporalScore: analysis.temporalScore ?? 0,
+      totalScore: (analysis.postcardScore ?? 0) / 100,
+      auditLog: JSON.parse((analysis.auditLog as string) ?? "[]"),
+    },
+    corroboration: {
+      primarySources: JSON.parse((analysis.primarySources as string) ?? "[]"),
+      queriesExecuted,
+      verdict:
+        (analysis.verdict as Corroboration["verdict"]) ?? "insufficient_data",
+      summary: analysis.summary ?? "",
+      confidenceScore: analysis.confidenceScore ?? 0,
+      corroborationLog: JSON.parse(
+        (analysis.corroborationLog as string) ?? "[]",
+      ),
+    },
+    timestamp: analysis.createdAt.toISOString(),
+    analysisId: analysis.id,
+  };
+}
+
+async function getLatestAnalysisByUrl(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
@@ -42,7 +89,7 @@ async function getExistingAnalysis(url: string) {
     .limit(1);
 
   if (result.length === 0) return null;
-  return result[0];
+  return result[0] as AnalysisWithPost;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -55,62 +102,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const accept = request.headers.get("accept") || "";
-  const wantsJson = accept.includes("application/json");
-
   try {
     const normalized = normalizePostUrl(url);
-    const existing = await getExistingAnalysis(normalized);
+    const existing = await getLatestAnalysisByUrl(normalized);
 
-    if (existing) {
-      const { analyses: analysis, posts: post } = existing;
-      const queriesExecuted = JSON.parse(
-        (analysis.queriesExecuted as string) || "[]",
-      ) as Array<{ query: string }>;
-      const report = {
-        postcard: {
-          platform: analysis.platform,
-          mainText: post.mainText || "",
-          username: post.username || undefined,
-          timestampText: post.timestampText || undefined,
-        },
-        markdown: post.markdown || "",
-        triangulation: {
-          targetUrl: analysis.url,
-          queries: queriesExecuted.map((q) => q.query),
-        },
-        audit: {
-          originScore: analysis.originScore || 0,
-          temporalScore: analysis.temporalScore || 0,
-          totalScore: analysis.postcardScore / 100,
-          auditLog: JSON.parse((analysis.auditLog as string) || "[]"),
-        },
-        corroboration: {
-          primarySources: JSON.parse(
-            (analysis.primarySources as string) || "[]",
-          ),
-          queriesExecuted,
-          verdict: analysis.verdict as Corroboration["verdict"],
-          summary: analysis.summary || "",
-          confidenceScore: analysis.confidenceScore || 0,
-          corroborationLog: JSON.parse(
-            (analysis.corroborationLog as string) || "[]",
-          ),
-        },
-        timestamp: analysis.createdAt.toISOString(),
-        analysisId: analysis.id,
-      };
-
-      if (wantsJson) {
-        return corsResponse(report, 200);
-      }
-
-      return corsRedirect(`/postcards?url=${encodeURIComponent(normalized)}`);
-    }
-
-    if (wantsJson) {
+    if (!existing) {
       return corsResponse(
         {
+          status: "not_found",
           error:
             "Analysis not found. POST to /api/postcards to initiate a new trace.",
         },
@@ -118,9 +117,42 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    return corsRedirect(
-      `/postcards?url=${encodeURIComponent(normalized)}&forceRefresh=true`,
-    );
+    const { analyses: analysis } = existing;
+
+    if (analysis.status === "processing") {
+      return corsResponse(
+        {
+          status: analysis.status,
+          stage: analysis.stage,
+          message: analysis.message,
+          progress: analysis.progress,
+        },
+        200,
+      );
+    }
+
+    if (analysis.status === "completed") {
+      const report = buildReport(existing);
+      return corsResponse(
+        {
+          status: analysis.status,
+          ...report,
+        },
+        200,
+      );
+    }
+
+    if (analysis.status === "failed") {
+      return corsResponse(
+        {
+          status: analysis.status,
+          error: analysis.error,
+        },
+        200,
+      );
+    }
+
+    return corsResponse({ error: "Unknown analysis status" }, 500);
   } catch (error) {
     return corsResponse(
       { error: error instanceof Error ? error.message : "Analysis failed" },
@@ -130,8 +162,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const traceId = crypto.randomUUID();
-
   let body: unknown;
   try {
     body = await request.json();
@@ -150,68 +180,117 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const { url, image, userApiKey, forceRefresh } = parsed.data;
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
+  if (image) {
+    return corsResponse(
+      {
+        error:
+          "Image-based forensic analysis is currently disabled. Please provide a direct post URL for verification.",
+      },
+      400,
+    );
+  }
 
-      const send = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
-      };
+  try {
+    const normalizedUrl = url!;
 
-      try {
-        send("progress", {
-          stage: "starting",
-          message: image
-            ? "Initializing forensic pipeline..."
-            : "Initializing trace...",
-          progress: 0,
-          traceId,
-        });
+    if (!forceRefresh) {
+      const latest = await getLatestAnalysisByUrl(normalizedUrl);
+      if (latest) {
+        const status = latest.analyses.status;
 
-        if (image) {
-          send("error", {
-            error:
-              "Image-based forensic analysis is currently disabled. Please provide a direct post URL for verification.",
-          });
-          controller.close();
-          return;
+        if (status === "processing") {
+          const report = buildReport(latest);
+          return corsResponse(
+            {
+              jobId: latest.analyses.id,
+              status: "processing",
+              ...report,
+            },
+            200,
+          );
         }
 
-        // URL-based analysis
-        const report = await processPostcardFromUrl(
-          url!,
-          userApiKey,
-          (stage, message, progress) => {
-            send("progress", { stage, message, progress });
-          },
-          forceRefresh,
-        );
+        if (status === "completed") {
+          const report = buildReport(latest);
+          await db
+            .update(analyses)
+            .set({ hits: sql`${analyses.hits} + 1` })
+            .where(eq(analyses.id, latest.analyses.id));
 
-        send("complete", {
-          postcard: report,
-          forensicReport: report.forensicReport,
-        });
-      } catch (error) {
-        send("error", {
-          error: error instanceof Error ? error.message : "Trace failed",
-        });
-      } finally {
-        controller.close();
+          return corsResponse(
+            {
+              jobId: latest.analyses.id,
+              status: "completed",
+              ...report,
+            },
+            200,
+          );
+        }
       }
-    },
-  });
+    }
 
-  return new NextResponse(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "X-Trace-Id": traceId,
-      ...CORS_HEADERS,
-    },
-  });
+    const existingProcessing = await getExistingProcessingJob(normalizedUrl);
+    if (existingProcessing) {
+      const report = buildReport(existingProcessing);
+      return corsResponse(
+        {
+          jobId: existingProcessing.analyses.id,
+          status: "processing",
+          ...report,
+        },
+        200,
+      );
+    }
+
+    if (forceRefresh) {
+      const latest = await getLatestAnalysisByUrl(normalizedUrl);
+      if (latest && latest.analyses.status === "completed") {
+        await db
+          .update(analyses)
+          .set({ status: "pending", deletedAt: new Date() })
+          .where(eq(analyses.id, latest.analyses.id));
+      }
+    }
+
+    const { postId, analysisId } = await createProcessingJob(
+      normalizedUrl,
+      forceRefresh,
+    );
+
+    await updateAnalysisProgress(analysisId, {
+      stage: "scraping",
+      message: "Initializing...",
+      progress: 0,
+      status: "processing",
+    });
+
+    processPostcardFromUrl(
+      normalizedUrl,
+      userApiKey,
+      (stage, message, progress) => {},
+      true,
+      analysisId,
+    ).catch(async (err) => {
+      await updateAnalysisProgress(analysisId, {
+        status: "failed",
+        error: err instanceof Error ? err.message : "Analysis failed",
+      });
+    });
+
+    return corsResponse(
+      {
+        jobId: analysisId,
+        status: "processing",
+        message: "Analysis started",
+      },
+      202,
+    );
+  } catch (error) {
+    return corsResponse(
+      { error: error instanceof Error ? error.message : "Analysis failed" },
+      500,
+    );
+  }
 }
 
 export async function OPTIONS(): Promise<NextResponse> {

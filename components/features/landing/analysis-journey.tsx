@@ -42,7 +42,7 @@ function Mailbox({
   passed: boolean;
   stageIndex: number;
 }) {
-  const label = STAGES[stageIndex].label;
+  const label = STAGES[stageIndex];
   return (
     <g className={active ? "mailbox-glowing" : ""}>
       <rect
@@ -94,90 +94,73 @@ function Mailbox({
           fontFamily="var(--font-serif), serif"
           fontStyle="italic"
         >
-          {label}
+          {label.label}
         </text>
       )}
     </g>
   );
 }
 
-type ApiProgress = {
-  stage: string;
-  message: string;
-  progress: number;
-};
+interface JobStatus {
+  jobId: string;
+  status: "processing" | "completed" | "failed";
+  stage?: string;
+  message?: string;
+  progress?: number;
+  error?: string;
+  postcard?: unknown;
+  markdown?: string;
+  triangulation?: unknown;
+  audit?: unknown;
+  corroboration?: unknown;
+  timestamp?: string;
+  analysisId?: string;
+}
 
-async function fetchReportWithProgress(
-  postUrl: string,
-  onProgress: (progress: ApiProgress) => void,
-  forceRefresh?: boolean,
-): Promise<PostcardReport> {
-  const response = await fetch("/api/postcards", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: postUrl, forceRefresh }),
-  });
-
-  if (!response.ok || !response.body) {
-    throw new Error(`Analysis request failed: ${response.status}`);
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const blocks = buffer.split("\n\n");
-    buffer = blocks.pop() ?? "";
-
-    for (const block of blocks) {
-      const eventMatch = block.match(/^event: (\w+)/m);
-      const dataMatch = block.match(/^data: (.+)/m);
-      if (!eventMatch || !dataMatch) continue;
-
-      const event = eventMatch[1];
-      const payload = JSON.parse(dataMatch[1]);
-
-      if (event === "progress") {
-        onProgress(payload as ApiProgress);
-      } else if (event === "complete") {
-        return payload.forensicReport as PostcardReport;
-      } else if (event === "error") {
-        throw new Error(payload.error);
-      }
-    }
-  }
-
-  throw new Error("Stream ended without a result.");
+interface AnalysisJourneyProps {
+  postUrl: string;
+  jobStatus: JobStatus | null;
+  onComplete: (report: PostcardReport) => void;
+  onReset: () => void;
+  onSubmit: (url: string) => void;
 }
 
 export function AnalysisJourney({
   postUrl,
-  forceRefresh,
+  jobStatus,
   onComplete,
   onReset,
-}: {
-  postUrl: string;
-  forceRefresh?: boolean;
-  onComplete: (report: PostcardReport) => void;
-  onReset: () => void;
-}) {
+  onSubmit,
+}: AnalysisJourneyProps) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [stageLabel, setStageLabel] = useState("Dispatched");
   const [stageDetail, setStageDetail] = useState("Evidence en route…");
   const [error, setError] = useState<string | null>(null);
   const [failedReport, setFailedReport] = useState<PostcardReport | null>(null);
-  const pendingReport = useRef<PostcardReport | null>(null);
   const onCompleteRef = useRef(onComplete);
-  const hasCompletedRef = useRef(false);
+  const onResetRef = useRef(onReset);
+  const onSubmitRef = useRef(onSubmit);
+  const hasSubmittedRef = useRef(false);
+  const lastStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
+
+  useEffect(() => {
+    onResetRef.current = onReset;
+  }, [onReset]);
+
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  }, [onSubmit]);
+
+  useEffect(() => {
+    if (!hasSubmittedRef.current) {
+      hasSubmittedRef.current = true;
+      onSubmitRef.current(postUrl);
+    }
+  }, [postUrl]);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -192,22 +175,33 @@ export function AnalysisJourney({
   }, [stageLabel, error]);
 
   useEffect(() => {
-    fetchReportWithProgress(
-      postUrl,
-      (progress) => {
-        const { stage: serverStage, message, progress: pct } = progress;
+    if (!jobStatus) return;
 
-        setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
-        setStageDetail(message);
+    const currentStatus = jobStatus.status;
 
-        if (pct < 0.33) setStage(1);
-        else if (pct < 0.66) setStage(2);
-        else if (pct < 1) setStage(3);
-        else setStage(4);
-      },
-      forceRefresh,
-    )
-      .then((report) => {
+    if (currentStatus === "failed") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(jobStatus.error ?? "Analysis failed");
+      return;
+    }
+
+    if (
+      currentStatus === "completed" &&
+      lastStatusRef.current !== "completed"
+    ) {
+      if (jobStatus.postcard && jobStatus.markdown) {
+        const report: PostcardReport = {
+          postcard: jobStatus.postcard as PostcardReport["postcard"],
+          markdown: jobStatus.markdown,
+          triangulation:
+            jobStatus.triangulation as PostcardReport["triangulation"],
+          audit: jobStatus.audit as PostcardReport["audit"],
+          corroboration:
+            jobStatus.corroboration as PostcardReport["corroboration"],
+          timestamp: jobStatus.timestamp ?? new Date().toISOString(),
+          analysisId: jobStatus.analysisId,
+        };
+
         const hasContent = !!(
           report.markdown && report.markdown.trim().length > 50
         );
@@ -217,26 +211,41 @@ export function AnalysisJourney({
           !hasContent
         ) {
           setError(
-            report.corroboration.summary ||
+            report.corroboration.summary ??
               "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
           );
           setFailedReport(report);
-          if (!hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-          }
+          lastStatusRef.current = currentStatus;
           return;
         }
-        pendingReport.current = report;
-        if (!hasCompletedRef.current) {
-          hasCompletedRef.current = true;
-          setTimeout(() => onCompleteRef.current(report), 800);
-        }
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Analysis failed");
-        console.error("Analysis failed:", err);
-      });
-  }, [postUrl, forceRefresh]);
+
+        setTimeout(() => {
+          onCompleteRef.current(report);
+        }, 800);
+      }
+      lastStatusRef.current = currentStatus;
+      return;
+    }
+
+    if (currentStatus === "processing") {
+      const { stage: serverStage, message, progress: pct } = jobStatus;
+
+      setStageLabel(
+        serverStage === "starting"
+          ? "Dispatched"
+          : (serverStage ?? "Processing"),
+      );
+      setStageDetail(message ?? "Analyzing...");
+
+      const pctNum = typeof pct === "number" ? pct : 0;
+      if (pctNum < 0.33) setStage(1);
+      else if (pctNum < 0.66) setStage(2);
+      else if (pctNum < 1) setStage(3);
+      else setStage(4);
+    }
+
+    lastStatusRef.current = currentStatus;
+  }, [jobStatus]);
 
   const planeX =
     stage === 0
@@ -377,7 +386,7 @@ export function AnalysisJourney({
                   borderRadius: "2px",
                   cursor: "pointer",
                 }}
-                onClick={onReset}
+                onClick={() => onResetRef.current()}
               >
                 Try Another Post
               </button>

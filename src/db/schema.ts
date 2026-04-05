@@ -39,6 +39,11 @@ export const analyses = sqliteTable("analyses", {
   auditLog: text("audit_log"),
   hits: integer("hits").notNull().default(0),
   status: text("status").notNull().default("pending"),
+  progress: real("progress"),
+  stage: text("stage"),
+  message: text("message"),
+  error: text("error"),
+  startedAt: integer("started_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(strftime('%s', 'now'))`),
