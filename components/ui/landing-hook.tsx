@@ -30,7 +30,7 @@ export function LandingHook() {
       aria-labelledby="hook-heading"
       style={{
         background: "var(--postal-paper-2)",
-        borderBottom: "1px solid var(--postal-ink-faint)",
+        borderBottom: "1px solid var(--postal-ink-muted)",
       }}
     >
       <div className="mx-auto max-w-3xl px-6 py-16">
@@ -95,8 +95,8 @@ export function LandingHook() {
           data-motion
           className="grid grid-cols-1 md:grid-cols-3"
           style={{
-            border: "1px solid var(--postal-ink-faint)",
-            background: "var(--postal-ink-faint)",
+            border: "1px solid var(--postal-ink-muted)",
+            background: "var(--postal-ink-muted)",
             gap: "1px",
           }}
           initial={{ opacity: 0, y: 16 }}
@@ -113,7 +113,7 @@ export function LandingHook() {
                 className="flex items-center justify-center w-9 h-9"
                 style={{
                   background: "var(--postal-paper-2)",
-                  border: "1px solid var(--postal-ink-faint)",
+                  border: "1px solid var(--postal-ink-muted)",
                 }}
               >
                 <Icon size={16} style={{ color: "var(--postal-ink-muted)" }} />

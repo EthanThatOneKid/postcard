@@ -15,7 +15,7 @@ export function Navbar() {
       className="sticky top-0 z-50"
       style={{
         background: "var(--postal-paper)",
-        borderBottom: "1px solid var(--postal-ink-faint)",
+        borderBottom: "1px solid var(--postal-ink-muted)",
       }}
     >
       <div className="mx-auto max-w-5xl px-6 h-14 flex items-center justify-between">

@@ -43,13 +43,13 @@ function PaperPlane({ className = "" }: { className?: string }) {
       <polygon
         points="0,32 120,8 82,32"
         fill="var(--postal-paper)"
-        stroke="var(--postal-ink-faint)"
+        stroke="var(--postal-ink-muted)"
         strokeWidth="0.8"
       />
       <polygon
         points="0,32 82,32 52,52"
         fill="var(--postal-paper-2)"
-        stroke="var(--postal-ink-faint)"
+        stroke="var(--postal-ink-muted)"
         strokeWidth="0.8"
       />
       <line
@@ -57,7 +57,7 @@ function PaperPlane({ className = "" }: { className?: string }) {
         y1="32"
         x2="82"
         y2="32"
-        stroke="var(--postal-ink-faint)"
+        stroke="var(--postal-ink-muted)"
         strokeWidth="0.7"
       />
       <line
@@ -471,7 +471,7 @@ export function AnalysisJourney({
                 style={{
                   fontFamily: "var(--font-serif)",
                   color: "var(--postal-ink-muted)",
-                  border: "1px solid var(--postal-ink-faint)",
+                  border: "1px solid var(--postal-ink-muted)",
                   background: "var(--postal-paper)",
                   borderRadius: "2px",
                   cursor: "pointer",
@@ -485,7 +485,7 @@ export function AnalysisJourney({
                 <div className="w-full mt-2 text-left">
                   <p
                     className="mb-1.5 text-[9px] tracking-widest uppercase"
-                    style={{ color: "var(--postal-ink-faint)" }}
+                    style={{ color: "var(--postal-ink-muted)" }}
                   >
                     Result from Jina Reader
                   </p>
@@ -495,7 +495,7 @@ export function AnalysisJourney({
                       fontFamily: "var(--font-serif)",
                       color: "var(--postal-ink-muted)",
                       background: "rgba(0,0,0,0.03)",
-                      border: "1px dashed var(--postal-ink-faint)",
+                      border: "1px dashed var(--postal-ink-muted)",
                       padding: "0.75rem",
                       maxHeight: "150px",
                     }}
@@ -517,7 +517,7 @@ export function AnalysisJourney({
               className="px-5 py-3 rounded-[2px] text-center"
               style={{
                 background: "rgba(253,246,227,0.9)",
-                border: "1px solid var(--postal-ink-faint)",
+                border: "1px solid var(--postal-ink-muted)",
                 backdropFilter: "blur(4px)",
               }}
             >

@@ -162,7 +162,7 @@ function TimelineNode({
             width: "28px",
             height: "28px",
             background: "var(--postal-paper-2)",
-            border: "1px solid var(--postal-ink-faint)",
+            border: "1px solid var(--postal-ink-muted)",
           }}
         >
           {icon}
@@ -171,7 +171,7 @@ function TimelineNode({
           <div
             className="mt-1 flex-1 border-l-2 border-dashed"
             style={{
-              borderColor: "var(--postal-ink-faint)",
+              borderColor: "var(--postal-ink-muted)",
               minHeight: "28px",
             }}
           />
@@ -198,7 +198,7 @@ function MetaStamp({ icon, text }: { icon: React.ReactNode; text: string }) {
     <div
       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
       style={{
-        border: "1px solid var(--postal-ink-faint)",
+        border: "1px solid var(--postal-ink-muted)",
         background: "var(--postal-paper)",
         fontFamily: "var(--font-serif)",
         color: "var(--postal-ink)",
@@ -266,7 +266,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               className="relative inline-flex flex-col items-center justify-center px-12 py-7"
               style={{
                 background: "var(--postal-paper-2)",
-                border: "2px solid var(--postal-ink-faint)",
+                border: "2px solid var(--postal-ink-muted)",
               }}
             >
               {isVerified && (
@@ -292,7 +292,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 {displayPct}
                 <span
                   className="text-xl"
-                  style={{ color: "var(--postal-ink-faint)", fontWeight: 400 }}
+                  style={{ color: "var(--postal-ink-muted)", fontWeight: 400 }}
                 >
                   /100
                 </span>
@@ -373,7 +373,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
 
         <div
           className="h-px"
-          style={{ background: "var(--postal-ink-faint)" }}
+          style={{ background: "var(--postal-ink-muted)" }}
         />
 
         <motion.section
@@ -420,7 +420,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                     className="text-[9px] px-1.5 py-0.5"
                     style={{
                       background: "var(--postal-paper-3)",
-                      border: "1px solid var(--postal-ink-faint)",
+                      border: "1px solid var(--postal-ink-muted)",
                       color: "var(--postal-ink-muted)",
                     }}
                   >
@@ -445,7 +445,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 className="p-3 text-[11px] italic leading-relaxed"
                 style={{
                   background: "var(--postal-paper-3)",
-                  border: "1px solid var(--postal-ink-faint)",
+                  border: "1px solid var(--postal-ink-muted)",
                   color: "var(--postal-ink)",
                   borderLeft: "2px solid var(--postal-blue)",
                 }}
@@ -468,7 +468,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                         className="flex flex-col gap-1.5 p-3"
                         style={{
                           background: "var(--postal-paper-2)",
-                          border: "1px solid var(--postal-ink-faint)",
+                          border: "1px solid var(--postal-ink-muted)",
                         }}
                       >
                         <div className="flex items-center justify-between">
@@ -482,7 +482,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                             {source.publishedDate && (
                               <span
                                 className="text-[8px]"
-                                style={{ color: "var(--postal-ink-faint)" }}
+                                style={{ color: "var(--postal-ink-muted)" }}
                               >
                                 {source.publishedDate}
                               </span>
@@ -546,13 +546,13 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                         className="flex items-center gap-1 px-2 py-1 text-[9px]"
                         style={{
                           background: "var(--postal-paper-3)",
-                          border: "1px dashed var(--postal-ink-faint)",
+                          border: "1px dashed var(--postal-ink-muted)",
                           color: "var(--postal-ink-muted)",
                         }}
                       >
                         <MagnifyingGlass size={10} />
                         {q.query}
-                        <span style={{ color: "var(--postal-ink-faint)" }}>
+                        <span style={{ color: "var(--postal-ink-muted)" }}>
                           ({q.sourcesFound})
                         </span>
                       </div>
@@ -653,7 +653,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             </div>
             <p
               className="mt-2 text-[9px] tracking-wide"
-              style={{ color: "var(--postal-ink-faint)" }}
+              style={{ color: "var(--postal-ink-muted)" }}
             >
               Score = 0.5 · Origin + 0.5 · Temporal
             </p>
@@ -662,7 +662,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
 
         <div
           className="h-px"
-          style={{ background: "var(--postal-ink-faint)" }}
+          style={{ background: "var(--postal-ink-muted)" }}
         />
 
         <motion.div
@@ -676,7 +676,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             style={{
               fontFamily: "var(--font-serif)",
               color: "var(--postal-ink)",
-              border: "1px solid var(--postal-ink-faint)",
+              border: "1px solid var(--postal-ink-muted)",
               background: "var(--postal-paper)",
             }}
             onClick={handleShare}
@@ -710,7 +710,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             style={{
               fontFamily: "var(--font-serif)",
               color: "var(--postal-ink-muted)",
-              border: "1px solid var(--postal-ink-faint)",
+              border: "1px solid var(--postal-ink-muted)",
               background: "transparent",
             }}
             onClick={() => {

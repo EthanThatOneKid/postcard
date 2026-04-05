@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -27,13 +28,13 @@ function PaperPlane({ className = "" }: { className?: string }) {
       <polygon
         points="0,32 120,8 82,32"
         fill="var(--postal-paper)"
-        stroke="var(--postal-ink-faint)"
+        stroke="var(--postal-ink-muted)"
         strokeWidth="0.8"
       />
       <polygon
         points="0,32 82,32 52,52"
         fill="var(--postal-paper-2)"
-        stroke="var(--postal-ink-faint)"
+        stroke="var(--postal-ink-muted)"
         strokeWidth="0.8"
       />
       <line
@@ -41,7 +42,7 @@ function PaperPlane({ className = "" }: { className?: string }) {
         y1="32"
         x2="82"
         y2="32"
-        stroke="var(--postal-ink-faint)"
+        stroke="var(--postal-ink-muted)"
         strokeWidth="0.7"
       />
       <line
@@ -164,7 +165,7 @@ function AirmailAnimation({
             className="relative w-80 h-52 rounded-sm shadow-2xl overflow-hidden"
             style={{
               background: "var(--postal-paper)",
-              border: "2px solid var(--postal-ink-faint)",
+              border: "2px solid var(--postal-ink-muted)",
             }}
           >
             <div
@@ -264,7 +265,7 @@ function AirmailAnimation({
               className="w-64 h-32 rounded-sm shadow-xl flex items-center justify-center"
               style={{
                 background: "var(--postal-paper-2)",
-                border: "1px solid var(--postal-ink-faint)",
+                border: "1px solid var(--postal-ink-muted)",
                 perspective: "400px",
               }}
             >
@@ -283,8 +284,8 @@ function AirmailAnimation({
                   background: `linear-gradient(
                     135deg,
                     transparent 48%,
-                    var(--postal-ink-faint) 49%,
-                    var(--postal-ink-faint) 51%,
+                    var(--postal-ink-muted) 49%,
+                    var(--postal-ink-muted) 51%,
                     transparent 52%
                   )`,
                   opacity: 0.4,
@@ -354,22 +355,20 @@ export function DropZone({
 }) {
   const [animating, setAnimating] = useState(false);
   const [postUrl, setPostUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = useCallback(async (url: string) => {
     if (!url.trim()) {
-      setError("Please enter a post URL.");
+      toast.error("Please enter a post URL.");
       return;
     }
     try {
       new URL(url);
     } catch {
-      setError("Please enter a valid URL.");
+      toast.error("Please enter a valid URL.");
       return;
     }
-    setError(null);
     setPostUrl(url);
     setAnimating(true);
   }, []);
@@ -421,7 +420,7 @@ export function DropZone({
           <div
             className="relative"
             style={{
-              boxShadow: `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-ink-faint), 0 4px 16px rgba(44,36,22,0.1)`,
+              boxShadow: `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-ink-muted), 0 4px 16px rgba(44,36,22,0.1)`,
               borderRadius: "2px",
               background: "var(--postal-paper)",
             }}
@@ -442,15 +441,19 @@ export function DropZone({
             />
 
             <div className="m-6 flex flex-col items-center">
+              <label htmlFor="post-url-input" className="sr-only">
+                Post URL
+              </label>
               <div
                 className="relative w-full max-w-sm"
                 style={{
                   background: "var(--postal-paper-2)",
-                  border: "1px solid var(--postal-ink-faint)",
+                  border: "1px solid var(--postal-ink-muted)",
                   borderRadius: "2px",
                 }}
               >
                 <input
+                  id="post-url-input"
                   ref={inputRef}
                   type="url"
                   placeholder="https://x.com/user/status/1234567890"
@@ -468,7 +471,7 @@ export function DropZone({
                   onBlur={(e) => {
                     setIsFocused(false);
                     e.currentTarget.style.borderColor =
-                      "var(--postal-ink-faint)";
+                      "var(--postal-ink-muted)";
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -519,7 +522,7 @@ export function DropZone({
                 className="mt-5 text-xs tracking-widest uppercase"
                 style={{
                   fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-faint)",
+                  color: "var(--postal-ink-muted)",
                 }}
               >
                 x.com &nbsp;·&nbsp; bluesky.app &nbsp;·&nbsp; threads.net
@@ -539,23 +542,6 @@ export function DropZone({
               }}
             />
           </div>
-
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mt-3 text-sm text-center italic"
-                style={{
-                  color: "var(--postal-red)",
-                  fontFamily: "var(--font-serif)",
-                }}
-              >
-                {error}
-              </motion.p>
-            )}
-          </AnimatePresence>
         </div>
       </section>
     </>

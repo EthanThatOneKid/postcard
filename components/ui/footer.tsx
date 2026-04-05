@@ -17,7 +17,7 @@ export function Footer() {
       <div
         style={{
           background: "var(--postal-paper-2)",
-          borderTop: "1px solid var(--postal-ink-faint)",
+          borderTop: "1px solid var(--postal-ink-muted)",
         }}
       >
         <div className="mx-auto max-w-5xl px-6 py-5 flex items-center justify-between flex-wrap gap-4">
