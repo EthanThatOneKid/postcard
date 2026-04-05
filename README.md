@@ -115,6 +115,7 @@ the source without the fragility of manual extraction.
   the PantherHacks 2026 Devpost submission.
 - [docs/PITCH.md](docs/PITCH.md): Pitch script and video cues.
 - [docs/API.md](docs/API.md): Full API reference with examples.
+- [public/openapi.json](public/openapi.json): OpenAPI v3.1 Specification for SDK generation.
 
 ---
 

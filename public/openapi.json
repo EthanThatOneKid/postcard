@@ -1,0 +1,238 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Postcard API",
+    "description": "Digital forensics API for verifying social media posts.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Postcard HQ",
+      "url": "https://github.com/postcardhq/postcard"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Local/Relative API base"
+    }
+  ],
+  "paths": {
+    "/postcards": {
+      "get": {
+        "summary": "Retrieve existing analysis",
+        "description": "Retrieves the forensic verification result for a given URL if it exists in the cache.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "The social media post URL to verify",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analysis found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostcardReport"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect to UI (if Accept header is not application/json)"
+          },
+          "400": {
+            "description": "Missing or invalid URL parameter"
+          },
+          "404": {
+            "description": "Analysis not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Initiate new trace",
+        "description": "Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) stream with progress updates.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostcardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream started",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Stream of events: progress, complete, error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PostcardRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Direct URL of the social media post"
+          },
+          "image": {
+            "type": "string",
+            "description": "Base64 encoded screenshot (currently disabled in backend)"
+          },
+          "userApiKey": {
+            "type": "string",
+            "description": "Optional API key for external integrations"
+          },
+          "forceRefresh": {
+            "type": "boolean",
+            "default": false,
+            "description": "Bypass cache and perform a fresh audit"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "PostcardReport": {
+        "type": "object",
+        "properties": {
+          "postcard": {
+            "type": "object",
+            "properties": {
+              "platform": {
+                "type": "string",
+                "enum": [
+                  "X",
+                  "YouTube",
+                  "Reddit",
+                  "Instagram",
+                  "Other"
+                ]
+              },
+              "mainText": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "timestampText": {
+                "type": "string"
+              }
+            }
+          },
+          "markdown": {
+            "type": "string",
+            "description": "Full extracted content in Markdown format"
+          },
+          "audit": {
+            "type": "object",
+            "properties": {
+              "originScore": {
+                "type": "number"
+              },
+              "temporalScore": {
+                "type": "number"
+              },
+              "totalScore": {
+                "type": "number"
+              },
+              "auditLog": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "corroboration": {
+            "$ref": "#/components/schemas/Corroboration"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "analysisId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Corroboration": {
+        "type": "object",
+        "properties": {
+          "primarySources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                },
+                "relevance": {
+                  "type": "string",
+                  "enum": [
+                    "supporting",
+                    "refuting",
+                    "neutral"
+                  ]
+                }
+              }
+            }
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "disputed",
+              "inconclusive",
+              "insufficient_data"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "confidenceScore": {
+            "type": "number"
+          },
+          "corroborationLog": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

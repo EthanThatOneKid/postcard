@@ -10,6 +10,10 @@ Postcard provides a public REST API for forensic verification of social media po
 https://your-deployment.com/api/postcards
 ```
 
+## OpenAPI Specification
+
+Developers can generate clients using our [OpenAPI JSON Specification](/openapi.json).
+
 ## Endpoints
 
 ### GET /api/postcards
