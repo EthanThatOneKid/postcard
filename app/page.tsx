@@ -59,7 +59,7 @@ export default function Home() {
           >
             Every screenshot tells a story.
             <br />
-            Let&apos;s find out if it&apos;s true.
+            We help you find the one that&apos;s true.
           </p>
 
           <Link

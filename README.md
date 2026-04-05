@@ -4,14 +4,14 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 
-> _Trace every post back to its source._
+> _Democratizing the truth._
 
 ![Postcard Illustration](./public/postcard-illustration.png)
 
-**Postcard** is a digital forensics tool that takes a social media post and
-traces it back to its definitive origin—calculating a **postcard score** of
-credibility by auditing how much the content has drifted from the primary
-source.
+Postcard is a digital forensics tool dedicated to the democratization of
+honesty. It takes any social media post and traces it back to its definitive
+origin—calculating a postcard score of credibility by auditing how much the
+content has drifted from the ground truth.
 
 ## Hackathon submission
 
@@ -67,18 +67,18 @@ additional quality-of-life feature.
 
 ## Product
 
-**Postcard** is a digital forensics pipeline that takes a social media post URL,
-traces it back to its original source, and produces a **postcard score
-(0–100%)** measuring how much the content has drifted from the truth.
+Postcard is a digital forensics pipeline that takes a social media post URL,
+traces it back to its original source, and produces a postcard score
+(0–100%) measuring how much the content has drifted from the truth.
 
-> _Trace every post back to its source._
+> _Democratizing the truth. Trace every post back to its source._
 
 ## The problem
 
 Screenshots strip all context. By the time something goes viral, it's been
-cropped, captioned, and misattributed. A screenshot of a tweet looks nothing
-like the original tweet. Postcard reverses this entropy by finding the primary
-source and auditing it for forensic consistency.
+cropped, captioned, and misattributed. Postcard reverses this entropy by
+finding the primary source and auditing it for forensic consistency—providing a
+scalable solution for the democratization of honesty.
 
 ### Solution
 
@@ -96,8 +96,8 @@ corroboration for social media posts:
 
 ## Lessons learned
 
-A key technical takeaway from this hackathon was discovering **how oEmbed APIs
-can significantly enhance verifiable OSINT**. While traditional scraping is
+A key technical takeaway from this hackathon was discovering how oEmbed APIs
+can significantly enhance verifiable OSINT. While traditional scraping is
 often blocked or inconsistent, leveraging official oEmbed endpoints (like those
 from X, Instagram, and YouTube) provides a reliable, high-fidelity way to
 capture metadata—such as author information and exact timestamps—directly from
@@ -105,12 +105,16 @@ the source without the fragility of manual extraction.
 
 ## Documentation
 
-- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md):** Comprehensive
-  **[Quick start](docs/CONTRIBUTING.md#quick-start)** guide, technical stack,
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): Comprehensive
+  [Quick start](docs/CONTRIBUTING.md#quick-start) guide, technical stack,
   and architecture notes.
-- **[docs/DESIGN.md](docs/DESIGN.md):** Full technical specification and
+- [docs/DESIGN.md](docs/DESIGN.md): Full technical specification and
   pipeline stages.
-- **[docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md):** High-level summary for
+- [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md): High-level summary for
   the PantherHacks 2026 Devpost submission.
-- **[docs/PITCH.md](docs/PITCH.md):** Pitch script and video cues.
-- **[docs/API.md](docs/API.md):** Full API reference with examples.
+- [docs/PITCH.md](docs/PITCH.md): Pitch script and video cues.
+- [docs/API.md](docs/API.md): Full API reference with examples.
+
+---
+
+Built with 🐈‍⬛ at [PantherHacks 2026](https://pantherhacks2026.devpost.com/)

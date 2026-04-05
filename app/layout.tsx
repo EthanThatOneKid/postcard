@@ -20,9 +20,9 @@ const garamond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Postcard — Trace every post back to its source",
+  title: "Postcard — Democratizing the truth",
   description:
-    "Digital forensics tool for tracing social media posts to their origin.",
+    "Honesty-as-a-Service: Forensic-grade source verification for the post-truth era.",
 };
 
 export default function RootLayout({

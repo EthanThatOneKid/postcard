@@ -8,9 +8,12 @@
 
 ## What it does
 
-**Postcard** is a digital forensics tool that takes a social media post URL, traces it back to its original source, and produces a **postcard score (0–100%)** measuring how much the content has drifted from the primary truth.
+Postcard is a digital forensics tool dedicate to the democratization of
+honesty. It takes any social media post URL, traces it back to its original
+source, and produces a postcard score (0–100%) measuring how much the content
+has drifted from the truth.
 
-Tagline: _Trace every post back to its source._
+Tagline: _Democratizing the truth. Trace every post back to its source._
 
 ## The problem
 
@@ -18,7 +21,7 @@ Screenshots strip all context. By the time something goes viral it's been croppe
 
 ## How it works
 
-**User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
+User flow: Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
 
 ### Entrypoint
 
@@ -26,15 +29,15 @@ Users submit the direct source URL for forensic verification. While the system s
 
 ### Ingestion
 
-Postcard uses the **Jina Reader API** to ingest live content and metadata (like counts, absolute timestamps, text) from the provided URL. This establishes the "ground truth" for the forensic audit.
+Postcard uses the Jina Reader API to ingest live content and metadata (like counts, absolute timestamps, text) from the provided URL. This establishes the "ground truth" for the forensic audit.
 
 ### Audit
 
-The system uses **Playwright** to scrape the live site and compute forensic subscores (Origin, Temporal, Visual).
+The system uses Playwright to scrape the live site and compute forensic subscores (Origin, Temporal, Visual).
 
 ### Corroboration
 
-An AI SDK agent loop with **Google Search grounding** performs deep dorking across trusted domains (X, Reddit, and News archives) to verify or refute the claim.
+An AI SDK agent loop with Google Search grounding performs deep dorking across trusted domains (X, Reddit, and News archives) to verify or refute the claim.
 
 ## Architecture
 
