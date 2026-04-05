@@ -28,17 +28,16 @@ export default function PostcardsClient({
     [searchParams],
   );
 
+  // Always pass through "analyzing" when a URL is present — even if the
+  // server already has a cached report — so the Analysis Journey is always
+  // shown (cached reports are animated through client-side with a fast path).
   const [pageStage, setPageStage] = useState<PageStage>(() => {
-    if (initialUrl) {
-      if (initialReport) return "results";
-      if (processingUrl || isForcedRefresh) return "analyzing";
-      return "upload";
-    }
+    if (initialUrl) return "analyzing";
     return "upload";
   });
 
   const [postUrl] = useState<string | null>(processingUrl || initialUrl);
-  const [report, setReport] = useState<PostcardReport | null>(initialReport);
+  const [report, setReport] = useState<PostcardReport | null>(null);
   const [forceRefresh] = useState(isForcedRefresh);
 
   const handleUrlSubmitted = useCallback(
@@ -63,6 +62,7 @@ export default function PostcardsClient({
       <AnalysisJourney
         postUrl={postUrl}
         forceRefresh={forceRefresh}
+        cachedReport={initialReport}
         onComplete={handleReportReady}
         onReset={handleReset}
       />
@@ -75,8 +75,9 @@ export default function PostcardsClient({
 
   return (
     <main>
-      <Hero />
-      <DropZone onUrlSubmitted={handleUrlSubmitted} />
+      <Hero>
+        <DropZone onUrlSubmitted={handleUrlSubmitted} />
+      </Hero>
     </main>
   );
 }
