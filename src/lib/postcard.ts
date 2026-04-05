@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db";
-import { postcards, posts, PostSchema, PostcardRowSchema } from "@/db/schema";
+import { postcards, posts, PostSchema, PostcardDb } from "@/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { corroboratePostcard } from "./agents/corroborator";
 import { auditPostcard } from "./agents/verifier";

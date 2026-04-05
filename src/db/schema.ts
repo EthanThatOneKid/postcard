@@ -70,7 +70,7 @@ export const PostSchema = z.object({
 export type Post = z.infer<typeof PostSchema>;
 export type NewPost = z.infer<typeof PostSchema>;
 
-export const PostcardRowSchema = z.object({
+export const PostcardDb = z.object({
   id: z.string(),
   postId: z.string(),
   url: z.string(),
@@ -99,4 +99,4 @@ export const PostcardRowSchema = z.object({
   deletedAt: z.date().nullable(),
 });
 
-export type PostcardRow = z.infer<typeof PostcardRowSchema>;
+export type PostcardDb = z.infer<typeof PostcardDb>;
