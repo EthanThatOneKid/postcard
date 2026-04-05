@@ -1,7 +1,7 @@
 import type { UnifiedPostClient, UnifiedPost } from "./types";
 
 export class JinaPostClient implements UnifiedPostClient {
-  canHandle(_url: string): boolean {
+  canHandle(_: string): boolean {
     return true; // Final fallback
   }
 

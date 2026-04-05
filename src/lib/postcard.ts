@@ -2,10 +2,6 @@ import { z } from "zod";
 import { db } from "@/db";
 import { analyses, posts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { preprocessImage } from "./vision/processor";
-import { extractPostcard } from "./vision/ocr";
-import { navigateToSource } from "./agents/navigator";
-import { auditPostcard } from "./agents/verifier";
 import { corroboratePostcard } from "./agents/corroborator";
 import { unifiedPostClient } from "./ingest";
 
@@ -14,6 +10,23 @@ export type ProgressCallback = (
   message: string,
   progress: number,
 ) => void;
+
+export const PostcardSchema = z.object({
+  username: z.string().optional().describe("User handle (e.g. '@elonmusk')"),
+  timestampText: z
+    .string()
+    .optional()
+    .describe('Relative or absolute post date (e.g. "2h ago")'),
+  platform: z
+    .enum(["X", "YouTube", "Reddit", "Instagram", "Other"])
+    .default("Other"),
+  engagement: z.record(z.string(), z.string()).optional(),
+  mainText: z
+    .string()
+    .describe("Character-for-character extraction of the primary post content"),
+});
+
+export type Postcard = z.infer<typeof PostcardSchema>;
 
 export const CorroborationSchema = z.object({
   primarySources: z.array(
@@ -45,30 +58,9 @@ export const CorroborationSchema = z.object({
 
 export type Corroboration = z.infer<typeof CorroborationSchema>;
 
-export const PostcardDataSchema = z.object({
-  username: z.string().optional(),
-  timestampText: z.string().optional(),
-  platform: z.string(),
-  engagement: z.record(z.string(), z.string()).optional(),
-  mainText: z.string(),
-  uiAnchors: z
-    .array(
-      z.object({
-        element: z.string(),
-        position: z.string(),
-        confidence: z.number(),
-      }),
-    )
-    .optional(),
-});
-
-export type PostcardData = z.infer<typeof PostcardDataSchema>;
-
 export const PostcardReportSchema = z.object({
-  ocr: z.object({
-    markdown: z.string(),
-    postmark: PostcardDataSchema,
-  }),
+  postcard: PostcardSchema,
+  markdown: z.string(), // Added to replace ocr.markdown
   triangulation: z.object({
     targetUrl: z.string().url().optional(),
     queries: z.array(z.string()),
@@ -76,7 +68,6 @@ export const PostcardReportSchema = z.object({
   audit: z.object({
     originScore: z.number(),
     temporalScore: z.number(),
-    visualScore: z.number(),
     totalScore: z.number(),
     auditLog: z.array(z.string()),
   }),
@@ -178,82 +169,41 @@ export async function processPostcardFromUrl(
     if (cachedAnalysis.length > 0) {
       await db
         .update(analyses)
-        .set({ hits: sql`hits + 1` })
+        .set({ hits: sql`${analyses.hits} + 1` })
         .where(eq(analyses.id, cachedAnalysis[0].analyses.id));
 
-      const primarySources = JSON.parse(
-        cachedAnalysis[0].analyses.primarySources || "[]",
-      );
-      const queriesExecuted = JSON.parse(
-        cachedAnalysis[0].analyses.queriesExecuted || "[]",
-      );
-      const corroborationLog = JSON.parse(
-        cachedAnalysis[0].analyses.corroborationLog || "[]",
-      );
-
-      progress("complete", "Cache hit - returning cached analysis", 1);
+      const analysis = cachedAnalysis[0].analyses;
       return {
-        url: cachedAnalysis[0].posts.url,
+        url: analysis.url,
         markdown: cachedAnalysis[0].posts.markdown || "",
-        platform: cachedAnalysis[0].posts.platform || "Other",
+        platform: analysis.platform || "Other",
         corroboration: {
-          primarySources,
-          queriesExecuted,
-          verdict: (cachedAnalysis[0].analyses.verdict || "inconclusive") as
-            | "verified"
-            | "disputed"
-            | "inconclusive"
-            | "insufficient_data",
-          summary: cachedAnalysis[0].analyses.summary || "",
-          confidenceScore: cachedAnalysis[0].analyses.confidenceScore || 0,
-          corroborationLog,
+          primarySources: JSON.parse((analysis.primarySources as string) || "[]"),
+          queriesExecuted: JSON.parse((analysis.queriesExecuted as string) || "[]"),
+          verdict: (analysis.verdict as Corroboration["verdict"]) || "insufficient_data",
+          summary: (analysis.summary as string) || "",
+          confidenceScore: analysis.confidenceScore || 0,
+          corroborationLog: JSON.parse((analysis.corroborationLog as string) || "[]"),
         },
-        postcardScore: cachedAnalysis[0].analyses.postcardScore,
-        timestamp: cachedAnalysis[0].analyses.createdAt.toISOString(),
+        postcardScore: analysis.postcardScore,
+        timestamp: analysis.createdAt.toISOString(),
       };
     }
-  } catch (cacheError) {
-    console.error("Cache lookup error:", cacheError);
-  }
 
-  try {
     progress("scraping", "Fetching content via UnifiedPostClient...", 0.1);
     const post = await unifiedPostClient.fetch(url);
     const markdown = post.markdown;
 
-    const BLOCKING_PATTERNS = [
-      "log in with facebook",
-      "log in to continue",
-      "sign up to see",
-      "create an account",
-      "this content is not available",
-      "content isn't available",
-      "rate limit",
-      "access denied",
-      "forbidden",
-      "blocked",
-      "oembed error",
-    ];
-
-    const isBlocked = BLOCKING_PATTERNS.some((pattern) =>
-      markdown.toLowerCase().includes(pattern),
-    );
-
-    const isMostlyLoginPage =
-      markdown.toLowerCase().includes("log into instagram") &&
-      (markdown.toLowerCase().includes("mobile number") ||
-        markdown.toLowerCase().includes("password"));
-
     if (
       !markdown ||
-      markdown.trim().length < 50 ||
-      isBlocked ||
-      isMostlyLoginPage
+      markdown.length < 50 ||
+      post.platform === "Other" ||
+      markdown.includes("Checking if the site connection is secure")
     ) {
       return {
         url,
         markdown: markdown || "",
-        platform: post.platform || inferPlatform(url),
+        platform: post.platform || "Other",
         corroboration: {
           primarySources: [],
           queriesExecuted: [],
@@ -262,9 +212,7 @@ export async function processPostcardFromUrl(
             "Unable to access this content. The link may require login or may be restricted.",
           confidenceScore: 0,
           corroborationLog: [
-            isBlocked || isMostlyLoginPage
-              ? "The platform blocked data ingestion."
-              : "Insufficient content was returned for a forensic audit.",
+            "The platform blocked data ingestion or returned insufficient content.",
           ],
         },
         postcardScore: 0,
@@ -274,11 +222,11 @@ export async function processPostcardFromUrl(
 
     progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
 
-    const platform = post.platform || inferPlatform(url);
+    const platform = post.platform;
     progress("corroborating", "Searching for primary sources...", 0.4);
 
-    const postcard: import("./vision/ocr").Postcard = {
-      platform: platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other",
+    const postcard: Postcard = {
+      platform: platform as Postcard["platform"],
       username: undefined,
       timestampText: undefined,
       mainText: markdown.slice(0, 500),
@@ -312,7 +260,7 @@ export async function processPostcardFromUrl(
       if (existingPost.length > 0) {
         await db
           .update(analyses)
-          .set({ hits: sql`hits + 1` })
+          .set({ hits: sql`${analyses.hits} + 1` })
           .where(eq(analyses.postId, existingPost[0].id));
       } else {
         const postId = crypto.randomUUID();
@@ -358,97 +306,8 @@ export async function processPostcardFromUrl(
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Scraping error:", error);
+    console.error("Trace error:", error);
     throw error;
   }
 }
 
-function inferPlatform(url: string): string {
-  const hostname = new URL(url).hostname.toLowerCase();
-  if (hostname.includes("x.com") || hostname.includes("twitter.com"))
-    return "X";
-  if (hostname.includes("youtube.com")) return "YouTube";
-  if (hostname.includes("reddit.com")) return "Reddit";
-  if (hostname.includes("instagram.com")) return "Instagram";
-  return "Other";
-}
-
-export async function processPostcardFromImage(
-  imageBuffer: Buffer,
-  mimeType: string = "image/png",
-): Promise<PostcardReport> {
-  if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
-    return {
-      ocr: {
-        markdown:
-          "## @YeOldeTweeter\n**Breaking: local man discovers that water is, in fact, wet.**\n*14h ago · 3.2K Retweets · 21.4K Likes*",
-        postmark: {
-          username: "@YeOldeTweeter",
-          timestampText: "14h ago",
-          platform: "X",
-          engagement: { likes: "21.4K", retweets: "3.2K", views: "812K" },
-          mainText:
-            "Breaking: local man discovers that water is, in fact, wet.",
-        },
-      },
-      triangulation: {
-        targetUrl: "https://x.com/YeOldeTweeter/status/1800000000000000001",
-        queries: [
-          'site:x.com @YeOldeTweeter "water is wet" 14h ago',
-          'YeOldeTweeter "local man discovers" tweet X',
-        ],
-      },
-      audit: {
-        originScore: 1,
-        temporalScore: 0.9,
-        visualScore: 0.9,
-        totalScore: 0.94,
-        auditLog: [
-          "[MOCK] Starting audit for URL: https://x.com/YeOldeTweeter/status/1800000000000000001",
-          "[MOCK] URL verified: Direct match found.",
-          "[MOCK] Temporal match: Timestamp consistent with live page content.",
-          "[MOCK] Visual consistency: UI fingerprints align with X platform template.",
-        ],
-      },
-      corroboration: MOCK_POSTCARD_RESPONSE.corroboration,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  const processed = await preprocessImage(imageBuffer, {
-    contrast: 1.2,
-    sharpen: true,
-  });
-
-  const ocr = await extractPostcard(processed, mimeType);
-
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  const { url: targetUrl, queries } = await navigateToSource(
-    ocr.postcard,
-    ocr.markdown,
-  );
-
-  const audit = targetUrl
-    ? await auditPostcard(targetUrl, ocr.postcard)
-    : {
-        originScore: 0,
-        temporalScore: 0,
-        visualScore: 0,
-        totalScore: 0,
-        auditLog: ["Skipping audit: No target URL identified by navigator."],
-      };
-
-  const corroboration = await corroboratePostcard(ocr.postcard, ocr.markdown);
-
-  return PostcardReportSchema.parse({
-    ocr: {
-      markdown: ocr.markdown,
-      postmark: ocr.postcard,
-    },
-    triangulation: { targetUrl, queries },
-    audit,
-    corroboration,
-    timestamp: new Date().toISOString(),
-  });
-}

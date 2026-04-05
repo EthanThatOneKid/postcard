@@ -1,7 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
-import type { Postcard } from "../vision/ocr";
+import type { Postcard } from "../postcard";
 
 const TRUSTED_DOMAINS = [
   "nytimes.com",
@@ -24,6 +24,12 @@ const TRUSTED_DOMAINS = [
   "nbcnews.com",
   "abcnews.com",
   "cbsnews.com",
+  "snopes.com",
+  "factcheck.org",
+  "politifact.com",
+  "fullfact.org",
+  "polymarket.com",
+  "wikipedia.org",
 ] as const;
 
 const PlatformDorkPatterns: Record<string, (query: string) => string> = {
@@ -102,7 +108,7 @@ export async function corroboratePostcard(
     stopWhen: stepCountIs(MAX_TOOL_CALLS),
     system: `You are a forensic media analyst. Your mission is to find primary sources that verify or refute the claims in a social media post using Google Search.
 
-TRUSTED DOMAINS (use site: operator):
+TRUSTED DOMAINS (use site: operator for higher relevance):
 ${TRUSTED_DOMAINS.map((d) => `  - ${d}`).join("\n")}
 
 PLATFORM DORKING PATTERNS:
@@ -111,6 +117,7 @@ PLATFORM DORKING PATTERNS:
 - Reddit: site:reddit.com "thread or comment text"
 - News: site:nytimes.com "specific statement"
 
+If you can't find direct news confirmation, SEARCH for 'hoax' or 'satire' along with the core claims.
 For each search, examine results from trusted domains first, then note other relevant sources.
 Return your final verdict in structured JSON format with relevance classification.`,
     messages: [
@@ -123,11 +130,11 @@ Username: ${postcard.username ?? "unknown"}
 Content: ${originalMarkdown}
 
 Search for corroborating or refuting sources. Focus on:
-1. News articles from trusted domains
-2. Official statements or press releases
-3. Public records or repository logs
+1. Identifying the original host of the content (even if obscure)
+2. News articles and dedicated fact-checks (Snopes, Politifact, etc.)
+3. Use unquoted searches if exact phrases fail to find debunks.
 
-Use the google_search tool to execute your searches.`,
+Use the google_search tool to execute your searches. If you find the content, your trace is successful.`,
       },
     ],
   });

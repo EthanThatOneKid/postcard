@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   processPostcardFromUrl,
-  processPostcardFromImage,
   PostcardRequestSchema,
 } from "@/src/lib/postcard";
 
@@ -48,49 +47,49 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           traceId,
         });
 
-        let report;
-        let forensicReport;
-
         if (image) {
           send("error", {
             error:
-              "Image upload is not yet supported. Please submit a post URL instead.",
+              "Image-based forensic analysis is currently disabled. Please provide a direct post URL for verification.",
           });
           controller.close();
           return;
-        } else {
-          // URL-based analysis
-          report = await processPostcardFromUrl(
-            url!,
-            userApiKey,
-            (stage, message, progress) => {
-              send("progress", { stage, message, progress });
-            },
-          );
-          // Build forensic report from URL-based response
-          forensicReport = {
-            ocr: {
-              markdown: report.markdown,
-              postmark: {
-                platform: report.platform,
-                mainText: report.markdown.slice(0, 500),
-              },
-            },
-            triangulation: {
-              targetUrl: report.url,
-              queries: [],
-            },
-            audit: {
-              originScore: 0.5,
-              temporalScore: 0.5,
-              visualScore: 0,
-              totalScore: report.postcardScore,
-              auditLog: ["URL-based analysis - direct source verification"],
-            },
-            corroboration: report.corroboration,
-            timestamp: report.timestamp,
-          };
         }
+
+        // URL-based analysis
+        const report = await processPostcardFromUrl(
+          url!,
+          userApiKey,
+          (stage, message, progress) => {
+            send("progress", { stage, message, progress });
+          },
+        );
+
+        // Build forensic report from URL-based response
+        const forensicReport = {
+          postcard: {
+            platform: report.platform,
+            mainText: report.markdown.slice(0, 500),
+          },
+          markdown: report.markdown,
+          triangulation: {
+            targetUrl: report.url,
+            queries: [],
+          },
+          audit: {
+            originScore: 0.5,
+            temporalScore: 0.5,
+            totalScore: 0.5, // 50/50 Origin and Temporal
+            auditLog: [
+              "Analysis initiated via direct URL submission",
+              "Skipping visual consistency audit (no source image provided)",
+              "Origin reputation based on platform ingestion client metrics",
+              `Direct source verification: ${report.url}`,
+            ],
+          },
+          corroboration: report.corroboration,
+          timestamp: report.timestamp,
+        };
 
         send("complete", {
           postcard: report,

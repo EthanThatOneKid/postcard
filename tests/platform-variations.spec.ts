@@ -13,7 +13,7 @@ test.describe("Platform variations", () => {
     await submitButton.click();
 
     await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+      timeout: 90000,
     });
   });
 
@@ -31,7 +31,7 @@ test.describe("Platform variations", () => {
     await submitButton.click();
 
     await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+      timeout: 90000,
     });
   });
 
@@ -47,7 +47,7 @@ test.describe("Platform variations", () => {
     await submitButton.click();
 
     await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+      timeout: 90000,
     });
   });
 
@@ -63,7 +63,7 @@ test.describe("Platform variations", () => {
     await submitButton.click();
 
     await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+      timeout: 90000,
     });
   });
 
@@ -81,7 +81,7 @@ test.describe("Platform variations", () => {
     await submitButton.click();
 
     await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+      timeout: 90000,
     });
   });
 

@@ -5,12 +5,16 @@ import { motion } from "motion/react";
 import {
   Clock,
   Fingerprint,
-  Globe,
-  CaretDown,
   MapTrifold,
+  MagnifyingGlass,
+  ShieldCheck,
+  ArrowRight,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import type { PostcardReport } from "@/src/lib/postcard";
+import type {
+  PostcardReport,
+  Corroboration,
+} from "@/src/lib/postcard";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -208,7 +212,7 @@ function MetaStamp({ icon, text }: { icon: React.ReactNode; text: string }) {
 }
 
 export function ForensicReport({ report }: { report: PostcardReport }) {
-  const { audit, triangulation, ocr } = report;
+  const { audit, triangulation, postcard, corroboration } = report;
   const score = audit.totalScore;
   const pct = Math.round(score * 100);
   const color = scoreColor(score);
@@ -241,30 +245,6 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
         fontFamily: "var(--font-serif)",
       }}
     >
-      <style>{`
-        .fr-accordion-content {
-          overflow: hidden;
-        }
-        .fr-accordion-content[data-state="open"] {
-          animation: fr-open 0.22s ease-out;
-        }
-        .fr-accordion-content[data-state="closed"] {
-          animation: fr-close 0.22s ease-out;
-        }
-        @keyframes fr-open {
-          from { height: 0; }
-          to   { height: var(--radix-accordion-content-height); }
-        }
-        @keyframes fr-close {
-          from { height: var(--radix-accordion-content-height); }
-          to   { height: 0; }
-        }
-        .fr-accordion-trigger[data-state="open"] .fr-caret {
-          transform: rotate(180deg);
-        }
-        .fr-caret { transition: transform 0.2s ease; }
-      `}</style>
-
       <div className="h-2" style={{ backgroundImage: AIRMAIL_BG }} />
 
       <div className="mx-auto max-w-2xl px-6 py-12 flex flex-col gap-8">
@@ -327,11 +307,14 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
           >
             <MetaStamp
               icon={
-                <Globe size={11} style={{ color: "var(--postal-ink-muted)" }} />
+                <ShieldCheck
+                  size={11}
+                  style={{ color: "var(--postal-ink-muted)" }}
+                />
               }
-              text={ocr.postmark.platform}
+              text={postcard.platform}
             />
-            {ocr.postmark.timestampText && (
+            {postcard.timestampText && (
               <MetaStamp
                 icon={
                   <Clock
@@ -339,10 +322,10 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                     style={{ color: "var(--postal-ink-muted)" }}
                   />
                 }
-                text={ocr.postmark.timestampText}
+                text={postcard.timestampText}
               />
             )}
-            {ocr.postmark.username && (
+            {postcard.username && (
               <MetaStamp
                 icon={
                   <Fingerprint
@@ -350,7 +333,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                     style={{ color: "var(--postal-ink-muted)" }}
                   />
                 }
-                text={ocr.postmark.username}
+                text={postcard.username}
               />
             )}
           </motion.div>
@@ -402,7 +385,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             )}
             {triangulation.queries.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
-                {triangulation.queries.map((q, i) => (
+                {triangulation.queries.map((q: string, i: number) => (
                   <span
                     key={i}
                     className="text-[9px] px-1.5 py-0.5"
@@ -421,12 +404,178 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
 
           <TimelineNode
             icon={
+              <MagnifyingGlass
+                size={13}
+                style={{ color: "var(--postal-ink-muted)" }}
+              />
+            }
+            label="Verification Grounding"
+          >
+            <div className="flex flex-col gap-4">
+              <div
+                className="p-3 text-[11px] italic leading-relaxed"
+                style={{
+                  background: "var(--postal-paper-3)",
+                  border: "1px solid var(--postal-ink-faint)",
+                  color: "var(--postal-ink)",
+                  borderLeft: "2px solid var(--postal-blue)",
+                }}
+              >
+                &ldquo;{corroboration.summary}&rdquo;
+              </div>
+
+              {corroboration.primarySources.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {corroboration.primarySources.map(
+                    (
+                      source: Corroboration["primarySources"][number],
+                      i: number,
+                    ) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -4 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.8 + i * 0.1 }}
+                        className="flex flex-col gap-1.5 p-3"
+                        style={{
+                          background: "var(--postal-paper-2)",
+                          border: "1px solid var(--postal-ink-faint)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-[9px] font-bold tracking-widest uppercase"
+                              style={{ color: "var(--postal-blue)" }}
+                            >
+                              {source.source}
+                            </span>
+                            {source.publishedDate && (
+                              <span
+                                className="text-[8px]"
+                                style={{ color: "var(--postal-ink-faint)" }}
+                              >
+                                {source.publishedDate}
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-tighter"
+                            style={{
+                              background:
+                                source.relevance === "supporting"
+                                  ? "var(--postal-green-faint)"
+                                  : source.relevance === "refuting"
+                                    ? "var(--postal-red-faint)"
+                                    : "var(--postal-paper-3)",
+                              color:
+                                source.relevance === "supporting"
+                                  ? "var(--postal-green-near)"
+                                  : source.relevance === "refuting"
+                                    ? "var(--postal-red)"
+                                    : "var(--postal-ink-muted)",
+                              border: "1px solid currentColor",
+                            }}
+                          >
+                            {source.relevance === "supporting" && (
+                              <ShieldCheck size={10} weight="fill" />
+                            )}
+                            {source.relevance}
+                          </div>
+                        </div>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold leading-tight hover:underline flex items-center gap-1"
+                          style={{ color: "var(--postal-ink)" }}
+                        >
+                          {source.title}
+                          <ArrowRight size={10} />
+                        </a>
+                        <p
+                          className="text-[10px] leading-relaxed line-clamp-2"
+                          style={{ color: "var(--postal-ink-muted)" }}
+                        >
+                          {source.snippet}
+                        </p>
+                      </motion.div>
+                    ),
+                  )}
+                </div>
+              )}
+
+              {corroboration.queriesExecuted.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {corroboration.queriesExecuted.map(
+                    (
+                      q: Corroboration["queriesExecuted"][number],
+                      i: number,
+                    ) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-1 px-2 py-1 text-[9px]"
+                        style={{
+                          background: "var(--postal-paper-3)",
+                          border: "1px dashed var(--postal-ink-faint)",
+                          color: "var(--postal-ink-muted)",
+                        }}
+                      >
+                        <MagnifyingGlass size={10} />
+                        {q.query}
+                        <span style={{ color: "var(--postal-ink-faint)" }}>
+                          ({q.sourcesFound})
+                        </span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          </TimelineNode>
+
+          <TimelineNode
+            icon={
+              <MagnifyingGlass
+                size={13}
+                style={{ color: "var(--postal-ink-muted)" }}
+              />
+            }
+            label="Corroboration Trace"
+          >
+            <div className="flex flex-col gap-1.5">
+              {corroboration.corroborationLog.map((entry: string, i: number) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span
+                    className="mt-px shrink-0 px-1 text-[9px] leading-tight text-center tabular-nums"
+                    style={{
+                      background: "var(--postal-blue-faint)",
+                      color: "var(--postal-blue)",
+                      border: "1px solid var(--postal-blue-faint)",
+                      minWidth: "20px",
+                    }}
+                  >
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: "var(--postal-ink-muted)" }}
+                  >
+                    {entry}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </TimelineNode>
+
+          <TimelineNode
+            icon={
               <Clock size={13} style={{ color: "var(--postal-ink-muted)" }} />
             }
             label="Audit Trail"
           >
             <div className="flex flex-col gap-1.5">
-              {audit.auditLog.map((entry, i) => (
+              {audit.auditLog.map((entry: string, i: number) => (
                 <div key={i} className="flex items-start gap-2">
                   <span
                     className="mt-px shrink-0 px-1 text-[9px] leading-tight text-center tabular-nums"
@@ -459,7 +608,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             label="Forensic Breakdown"
             isLast
           >
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <ScoreGauge
                 label="Origin"
                 value={audit.originScore}
@@ -470,17 +619,12 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 value={audit.temporalScore}
                 delay={1.0}
               />
-              <ScoreGauge
-                label="Visual"
-                value={audit.visualScore}
-                delay={1.1}
-              />
             </div>
             <p
               className="mt-2 text-[9px] tracking-wide"
               style={{ color: "var(--postal-ink-faint)" }}
             >
-              Score = 0.4 · Origin + 0.3 · Temporal + 0.3 · Visual
+              Score = 0.5 · Origin + 0.5 · Temporal
             </p>
           </TimelineNode>
         </motion.section>
@@ -489,126 +633,6 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
           className="h-px"
           style={{ background: "var(--postal-ink-faint)" }}
         />
-
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.0, duration: 0.5 }}
-        >
-          <details className="group">
-            <summary
-              className="w-full flex items-center justify-between cursor-pointer px-3 py-2 list-none"
-              style={{
-                background: "var(--postal-paper-2)",
-                border: "1px solid var(--postal-ink-faint)",
-                fontFamily: "var(--font-serif)",
-              }}
-            >
-              <span
-                className="text-[10px] tracking-[0.2em] uppercase"
-                style={{ color: "var(--postal-ink-muted)" }}
-              >
-                Semantic Diff — OCR vs. Live Page
-              </span>
-              <CaretDown
-                size={12}
-                className="fr-caret"
-                style={{ color: "var(--postal-ink-muted)" }}
-              />
-            </summary>
-            <div
-              className="flex flex-col gap-4 p-4"
-              style={{
-                borderLeft: "1px solid var(--postal-ink-faint)",
-                borderRight: "1px solid var(--postal-ink-faint)",
-                borderBottom: "1px solid var(--postal-ink-faint)",
-              }}
-            >
-              <div>
-                <p
-                  className="mb-1.5 text-[9px] tracking-widest uppercase"
-                  style={{ color: "var(--postal-ink-faint)" }}
-                >
-                  Extracted OCR Text
-                </p>
-                <pre
-                  className="text-xs leading-relaxed whitespace-pre-wrap overflow-y-auto"
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    color: "var(--postal-ink-muted)",
-                    background: "var(--postal-paper-3)",
-                    border: "1px dashed var(--postal-ink-faint)",
-                    padding: "0.75rem",
-                    maxHeight: "200px",
-                  }}
-                >
-                  {ocr.markdown}
-                </pre>
-              </div>
-
-              <div>
-                <p
-                  className="mb-1.5 text-[9px] tracking-widest uppercase"
-                  style={{ color: "var(--postal-ink-faint)" }}
-                >
-                  Extracted Content
-                </p>
-                <div
-                  className="text-xs leading-relaxed p-3"
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    color: "var(--postal-ink-muted)",
-                    background: "var(--postal-paper-3)",
-                    border: "1px dashed var(--postal-ink-faint)",
-                  }}
-                >
-                  <p>
-                    <span
-                      className="font-semibold"
-                      style={{ color: "var(--postal-ink)" }}
-                    >
-                      Main text:
-                    </span>{" "}
-                    {ocr.postmark.mainText}
-                  </p>
-
-                  {ocr.postmark.engagement &&
-                    Object.keys(ocr.postmark.engagement).length > 0 && (
-                      <p className="mt-1">
-                        <span
-                          className="font-semibold"
-                          style={{ color: "var(--postal-ink)" }}
-                        >
-                          Engagement:
-                        </span>{" "}
-                        {Object.entries(ocr.postmark.engagement)
-                          .map(([k, v]) => `${k}: ${v}`)
-                          .join(" · ")}
-                      </p>
-                    )}
-
-                  {ocr.postmark.uiAnchors &&
-                    ocr.postmark.uiAnchors.length > 0 && (
-                      <p className="mt-1">
-                        <span
-                          className="font-semibold"
-                          style={{ color: "var(--postal-ink)" }}
-                        >
-                          UI Anchors:
-                        </span>{" "}
-                        {ocr.postmark.uiAnchors
-                          .map(
-                            (a) =>
-                              `${a.element} (${a.position}, ${Math.round(a.confidence * 100)}%)`,
-                          )
-                          .join(" · ")}
-                      </p>
-                    )}
-                </div>
-              </div>
-            </div>
-          </details>
-        </motion.section>
 
         <motion.div
           className="flex justify-center"

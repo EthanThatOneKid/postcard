@@ -16,8 +16,8 @@ interface StageInfo {
 
 const STAGES: StageInfo[] = [
   {
-    label: "Vision Parse",
-    detail: "Extracting text, handles & timestamps…",
+    label: "Ingestion Agent",
+    detail: "Fetching live content via Unified Client…",
     mailboxX: 22,
   },
   {
@@ -285,7 +285,16 @@ export function AnalysisJourney({
       else setStage(4);
     })
       .then((report) => {
-        if (report.corroboration.verdict === "insufficient_data") {
+        // If we have markdown content, we "traced" it.
+        // We only show the error if we have NO content AND insufficient data.
+        const hasContent = !!(
+          report.markdown && report.markdown.trim().length > 50
+        );
+
+        if (
+          report.corroboration.verdict === "insufficient_data" &&
+          !hasContent
+        ) {
           setError(
             report.corroboration.summary ||
               "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
@@ -452,7 +461,7 @@ export function AnalysisJourney({
                 Try Another Post
               </button>
 
-              {failedReport?.ocr?.markdown && (
+              {failedReport?.markdown && (
                 <div className="w-full mt-2 text-left">
                   <p
                     className="mb-1.5 text-[9px] tracking-widest uppercase"
@@ -471,7 +480,7 @@ export function AnalysisJourney({
                       maxHeight: "150px",
                     }}
                   >
-                    {failedReport.ocr.markdown}
+                    {failedReport.markdown}
                   </pre>
                 </div>
               )}

@@ -5,7 +5,6 @@ import { z } from "zod";
 export const AuditResultSchema = z.object({
   originScore: z.number().min(0).max(1),
   temporalScore: z.number().min(0).max(1),
-  visualScore: z.number().min(0).max(1),
   totalScore: z.number().min(0).max(1),
   auditLog: z.array(z.string()),
 });
@@ -14,18 +13,16 @@ export type AuditResult = z.infer<typeof AuditResultSchema>;
 
 export async function auditPostcard(
   url: string,
-  postcard: import("../vision/ocr").Postcard,
+  postcard: import("../postcard").Postcard,
 ): Promise<{
   originScore: number;
   temporalScore: number;
-  visualScore: number;
   totalScore: number;
   auditLog: string[];
 }> {
   const auditLog: string[] = [`Starting audit for URL: ${url}`];
   let originScore = 0;
   let temporalScore = 0;
-  let visualScore = 0;
 
   const { text } = await generateText({
     model: google("gemini-2.0-flash"),
@@ -55,15 +52,12 @@ Use google_search to verify the URL exists and check timestamp alignment.`,
   auditLog.push(text);
   originScore = url.includes(postcard.platform.toLowerCase()) ? 1 : 0.5;
   temporalScore = 0.8;
-  visualScore = 0.8;
 
-  const totalScore =
-    0.4 * originScore + 0.3 * temporalScore + 0.3 * visualScore;
+  const totalScore = 0.5 * originScore + 0.5 * temporalScore;
 
   return AuditResultSchema.parse({
     originScore,
     temporalScore,
-    visualScore,
     totalScore,
     auditLog: [
       ...auditLog,
