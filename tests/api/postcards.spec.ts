@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const FAKE_PIPELINE_DELAY = process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY || "0";
+const FAKE_PIPELINE_DELAY = process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY ?? "0";
 const USE_DELAY = parseInt(FAKE_PIPELINE_DELAY, 10) > 0;
 
 test.describe("GET /api/postcards", () => {

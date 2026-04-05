@@ -178,7 +178,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { url, userApiKey, forceRefresh } = parsed.data;
+  const { url, userApiKey: bodyApiKey, forceRefresh } = parsed.data;
+
+  // Check for user-provided API key in header (fallback if not in .env)
+  const headerApiKey = request.headers.get("x-user-api-key");
+  const userApiKey = bodyApiKey ?? headerApiKey ?? undefined;
 
   try {
     const normalizedUrl = url;

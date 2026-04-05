@@ -142,7 +142,7 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 
 **Response (200):**
 
-If a processing job already exists for this URL, returns that job instead of creating a new one:
+If a processing postcard already exists for this URL, returns that postcard instead of creating a new one:
 
 ```json
 {

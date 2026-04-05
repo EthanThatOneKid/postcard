@@ -1,7 +1,14 @@
-import { google } from "@ai-sdk/google";
+import { google, createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, streamText, stepCountIs } from "ai";
 import { z } from "zod";
 import type { Postcard } from "@/src/lib/postcard";
+
+function getGoogleProvider(apiKey?: string) {
+  if (apiKey) {
+    return createGoogleGenerativeAI({ apiKey });
+  }
+  return google;
+}
 
 const TRUSTED_DOMAINS = [
   "nytimes.com",
@@ -85,7 +92,9 @@ export async function corroboratePostcard(
   postcard: Postcard,
   originalMarkdown: string,
   onProgress?: (message: string) => void,
+  apiKey?: string,
 ): Promise<CorroborationResult> {
+  const googleProvider = getGoogleProvider(apiKey);
   const corroborationLog: string[] = [];
   const primarySources: CorroborationSource[] = [];
   const queriesExecuted: { query: string; sourcesFound: number }[] = [];
@@ -102,9 +111,9 @@ export async function corroboratePostcard(
   log(`Starting search grounding for ${postcard.platform} post...`);
 
   const { fullStream } = await streamText({
-    model: google("gemini-1.5-flash"),
+    model: googleProvider("gemini-1.5-flash"),
     tools: {
-      google_search: google.tools.googleSearch({}),
+      google_search: googleProvider.tools.googleSearch({}),
     },
     stopWhen: stepCountIs(MAX_TOOL_CALLS),
     system: `You are a forensic media analyst. Your mission is to find primary sources that verify or refute the claims in a social media post using Google Search.
@@ -206,7 +215,7 @@ Use the google_search tool to execute your searches.`,
     .join("\n");
 
   const { text: verdictText } = await generateText({
-    model: google("gemini-1.5-flash"),
+    model: googleProvider("gemini-1.5-flash"),
     system: `You are a forensic media analyst. Based on the search results, provide a structured verdict about whether the social media post is TRUE, FALSE, or UNCERTAIN.
 
 IMPORTANT: Your job is to be CRITICAL and SKEPTICAL. Social media is full of misinformation. Consider:

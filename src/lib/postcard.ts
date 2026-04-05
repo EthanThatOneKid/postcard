@@ -225,7 +225,7 @@ export const PostcardResponseSchema = z.object({
 
 export type PostcardResponse = z.infer<typeof PostcardResponseSchema>;
 
-const MOCK_POSTCARD_RESPONSE: PostcardResponse = {
+const FAKE_POSTCARD_RESPONSE: PostcardResponse = {
   url: "https://x.com/example/status/123",
   markdown:
     "## @YeOldeTweeter\n**Breaking: local man discovers that water is, in fact, wet.**\n*14h ago · 3.2K Retweets · 21.4K Likes*",
@@ -286,7 +286,7 @@ export async function processPostcardFromUrl(
 
   if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
     const delayMs = parseInt(
-      process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY || "0",
+      process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY ?? "0",
       10,
     );
     const fail = process.env.NEXT_PUBLIC_FAKE_PIPELINE_FAIL === "true";
@@ -304,12 +304,12 @@ export async function processPostcardFromUrl(
     if (fail || urlContainsFail) {
       await updateAnalysisProgress(analysisId!, {
         status: "failed",
-        error: "Mock failure: External API unavailable",
+        error: "Fake failure: External API unavailable",
       });
-      throw new Error("Mock failure: External API unavailable");
+      throw new Error("Fake failure: External API unavailable");
     }
 
-    return { ...MOCK_POSTCARD_RESPONSE };
+    return { ...FAKE_POSTCARD_RESPONSE };
   }
 
   try {
@@ -429,6 +429,7 @@ export async function processPostcardFromUrl(
       async (msg: string) => {
         await updateProgress("corroborating", msg, 0.5);
       },
+      userApiKey,
     );
 
     await updateProgress(
@@ -436,7 +437,7 @@ export async function processPostcardFromUrl(
       "Verifying origin and temporal alignment...",
       0.7,
     );
-    const audit = await auditPostcard(normalizedUrl, postcard);
+    const audit = await auditPostcard(normalizedUrl, postcard, userApiKey);
 
     const corroborationScore = corroboration.confidenceScore;
     const supportingSources = corroboration.primarySources.filter(

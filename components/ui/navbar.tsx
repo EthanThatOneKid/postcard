@@ -40,7 +40,18 @@ export function Navbar() {
           </span>
         </Link>
 
-        <nav aria-label="Primary">
+        <nav aria-label="Primary" className="flex items-center gap-2">
+          <Link
+            href="/settings"
+            className="inline-flex items-center min-h-[44px] px-3 text-[11px] tracking-[0.22em] uppercase"
+            style={{
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-ink-muted)",
+            }}
+            title="API Settings"
+          >
+            Settings
+          </Link>
           <Link
             href="/#why-it-matters"
             className="inline-flex items-center min-h-[44px] px-3 text-[11px] tracking-[0.22em] uppercase"

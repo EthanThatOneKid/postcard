@@ -1,8 +1,15 @@
-import { google } from "@ai-sdk/google";
+import { google, createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { z } from "zod";
 
 import type { Postcard } from "@/src/lib/postcard";
+
+function getGoogleProvider(apiKey?: string) {
+  if (apiKey) {
+    return createGoogleGenerativeAI({ apiKey });
+  }
+  return google;
+}
 
 export const AuditResultSchema = z.object({
   originScore: z.number().min(0).max(1),
@@ -16,19 +23,21 @@ export type AuditResult = z.infer<typeof AuditResultSchema>;
 export async function auditPostcard(
   url: string,
   postcard: Postcard,
+  apiKey?: string,
 ): Promise<{
   originScore: number;
   temporalScore: number;
   totalScore: number;
   auditLog: string[];
 }> {
+  const googleProvider = getGoogleProvider(apiKey);
   const auditLog: string[] = [`Starting audit for URL: ${url}`];
   let originScore = 0;
   let temporalScore = 0;
 
   const { text } = await generateText({
-    model: google("gemini-2.0-flash"),
-    tools: { google_search: google.tools.googleSearch({}) },
+    model: googleProvider("gemini-2.0-flash"),
+    tools: { google_search: googleProvider.tools.googleSearch({}) },
     system: `You are the Forensic Auditor for Postcard. Given a source URL and post metadata, verify:
 1. Is the URL reachable and matches the platform?
 2. Does the timestamp align with search results?
