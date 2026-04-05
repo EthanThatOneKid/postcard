@@ -258,14 +258,43 @@ export async function processPostcardFromUrl(
       );
 
       if (fail || urlContainsFail) {
-        await updatePostcardRow(id!, {
-          status: "failed",
-          error: "Fake failure: External API unavailable",
-        });
+        if (id) {
+          await updatePostcardRow(id, {
+            status: "failed",
+            error: "Fake failure: External API unavailable",
+          });
+        }
         throw new Error("Fake failure: External API unavailable");
       }
 
-      return { ...FAKE_POSTCARD_RESPONSE };
+      if (id) {
+        await await db
+          .update(postcards)
+          .set({
+            platform: FAKE_POSTCARD_RESPONSE.platform,
+            postcardScore: Math.floor(FAKE_POSTCARD_RESPONSE.postcardScore * 100),
+            verdict: FAKE_POSTCARD_RESPONSE.corroboration.verdict,
+            summary: FAKE_POSTCARD_RESPONSE.corroboration.summary,
+            confidenceScore: FAKE_POSTCARD_RESPONSE.corroboration.confidenceScore,
+            primarySources: JSON.stringify(
+              FAKE_POSTCARD_RESPONSE.corroboration.primarySources,
+            ),
+            queriesExecuted: JSON.stringify(
+              FAKE_POSTCARD_RESPONSE.corroboration.queriesExecuted,
+            ),
+            corroborationLog: JSON.stringify(
+              FAKE_POSTCARD_RESPONSE.corroboration.corroborationLog,
+            ),
+            status: "completed",
+            progress: 1,
+            stage: "complete",
+            message: "Analysis complete",
+            updatedAt: new Date(),
+          })
+          .where(eq(postcards.id, id));
+      }
+
+      return { ...FAKE_POSTCARD_RESPONSE, id };
     }
 
     try {

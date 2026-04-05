@@ -44,12 +44,38 @@ export async function GET(request: Request) {
       const result = await db
         .select()
         .from(postcards)
-        .innerJoin(posts, eq(posts.url, normalizedUrl))
+        .innerJoin(posts, eq(posts.id, postcards.postId))
+        .where(eq(postcards.url, normalizedUrl))
         .orderBy(sql`${postcards.createdAt} DESC`)
         .limit(1);
 
       if (result.length > 0) {
         const { postcards: row, posts: post } = result[0];
+
+        // If it's still processing, return a 202 status for polling parity
+        if (row.status === "pending" || row.status === "processing") {
+          return NextResponse.json(
+            {
+              status: "processing",
+              id: row.id,
+              message: row.message || "Forensic trace in progress...",
+            },
+            { status: 202, headers: CORS_HEADERS },
+          );
+        }
+
+        // If it failed, return the error context
+        if (row.status === "failed") {
+          return NextResponse.json(
+            {
+              status: "failed",
+              id: row.id,
+              error: row.error || "Analysis failed.",
+            },
+            { status: 200, headers: CORS_HEADERS },
+          );
+        }
+
         const report = dbRowToReport(row, post);
 
         return NextResponse.json(
