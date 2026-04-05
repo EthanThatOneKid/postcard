@@ -12,6 +12,25 @@ import type { Corroboration } from "@/src/lib/postcard";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Accept",
+};
+
+function corsResponse(body: unknown, status: number): NextResponse {
+  return NextResponse.json(body, { status, headers: CORS_HEADERS });
+}
+
+function corsRedirect(url: string): NextResponse {
+  return NextResponse.redirect(url, {
+    headers: {
+      ...CORS_HEADERS,
+      Location: url,
+    },
+  });
+}
+
 async function getExistingAnalysis(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
@@ -30,9 +49,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const url = request.nextUrl.searchParams.get("url");
 
   if (!url) {
-    return NextResponse.json(
+    return corsResponse(
       { error: "Missing required 'url' query parameter." },
-      { status: 400 },
+      400,
     );
   }
 
@@ -82,37 +101,29 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       };
 
       if (wantsJson) {
-        return NextResponse.json(report);
+        return corsResponse(report, 200);
       }
 
-      return NextResponse.redirect(
-        new URL(
-          `/postcards?url=${encodeURIComponent(normalized)}`,
-          request.url,
-        ),
-      );
+      return corsRedirect(`/postcards?url=${encodeURIComponent(normalized)}`);
     }
 
     if (wantsJson) {
-      return NextResponse.json(
+      return corsResponse(
         {
           error:
             "Analysis not found. POST to /api/postcards to initiate a new trace.",
         },
-        { status: 404 },
+        404,
       );
     }
 
-    return NextResponse.redirect(
-      new URL(
-        `/postcards?url=${encodeURIComponent(normalized)}&forceRefresh=true`,
-        request.url,
-      ),
+    return corsRedirect(
+      `/postcards?url=${encodeURIComponent(normalized)}&forceRefresh=true`,
     );
   } catch (error) {
-    return NextResponse.json(
+    return corsResponse(
       { error: error instanceof Error ? error.message : "Analysis failed" },
-      { status: 500 },
+      500,
     );
   }
 }
@@ -224,6 +235,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
       "X-Trace-Id": traceId,
+      ...CORS_HEADERS,
     },
+  });
+}
+
+export async function OPTIONS(): Promise<NextResponse> {
+  return new NextResponse(null, {
+    headers: CORS_HEADERS,
   });
 }
