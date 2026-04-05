@@ -123,6 +123,9 @@ export default async function PostcardsPage({ searchParams }: Props) {
         timestamp: analysis.createdAt.toISOString(),
         analysisId: analysis.id,
       };
+    } else {
+      // URL present but not yet in cache — kick off analysis
+      processingUrl = normalizedUrl;
     }
   } else if (normalizedUrl && forceRefresh) {
     processingUrl = normalizedUrl;

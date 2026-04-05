@@ -1,16 +1,17 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Cloud, SmallCancelStamp, WaxSeal } from "@/components/illustrations";
+import { Cloud, SmallCancelStamp } from "@/components/illustrations";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-export function Hero() {
+export function Hero({ children }: { children?: React.ReactNode }) {
   return (
     <section
       className="relative w-full overflow-hidden"
-      style={{ minHeight: "460px" }}
+      style={{ minHeight: "640px" }}
     >
+      {/* Sky gradient */}
       <div
         className="absolute inset-0"
         style={{
@@ -25,6 +26,7 @@ export function Hero() {
         }}
       />
 
+      {/* Drifting clouds */}
       <svg
         className="absolute inset-0 w-full"
         style={{ height: "70%" }}
@@ -40,6 +42,7 @@ export function Hero() {
         <Cloud cx={700} cy={110} scale={0.5} driftClass="cloud-drift-slow" />
       </svg>
 
+      {/* Green hills — absolute bottom, z beneath content */}
       <svg
         className="absolute bottom-0 left-0 w-full"
         viewBox="0 0 1200 120"
@@ -62,6 +65,7 @@ export function Hero() {
         />
       </svg>
 
+      {/* Cancel stamp — decorative, top right */}
       <motion.div
         className="absolute top-6 right-8 opacity-30 pointer-events-none"
         initial={{ opacity: 0, rotate: -12, scale: 0.8 }}
@@ -71,7 +75,9 @@ export function Hero() {
         <SmallCancelStamp className="w-24 h-24" />
       </motion.div>
 
-      <div className="relative z-10 flex flex-col items-center pt-16 pb-24 px-6 text-center">
+      {/* Content — stacks title → divider → tagline → input panel in the sky */}
+      <div className="relative z-10 flex flex-col items-center pt-16 pb-48 px-6 text-center">
+        {/* Airmail stripe — key visual separator at very top */}
         <motion.div
           className="w-full absolute top-0 left-0 h-3"
           style={{
@@ -91,11 +97,7 @@ export function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.8,
-            delay: 0.15,
-            ease: EASE,
-          }}
+          transition={{ duration: 0.8, delay: 0.15, ease: EASE }}
         >
           <h1
             className="font-black italic leading-none mb-1"
@@ -138,7 +140,7 @@ export function Hero() {
         </motion.div>
 
         <motion.p
-          className="text-base italic mb-10"
+          className="text-base italic mb-8"
           style={{
             fontFamily: "var(--font-serif), serif",
             color: "rgba(253,246,227,0.85)",
@@ -153,18 +155,17 @@ export function Hero() {
           Trace every post back to its source.
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            duration: 0.6,
-            delay: 0.85,
-            type: "spring",
-            bounce: 0.3,
-          }}
-        >
-          <WaxSeal />
-        </motion.div>
+        {/* Input panel — in the sky, enters after title sequence */}
+        {children && (
+          <motion.div
+            className="w-full flex justify-center"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, delay: 1.0, ease: EASE }}
+          >
+            {children}
+          </motion.div>
+        )}
       </div>
     </section>
   );

@@ -7,6 +7,10 @@ import { PaperPlane, Cloud } from "@/components/illustrations";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+// Resolved value used directly in filter — CSS variables are not interpolatable
+// by the browser animation engine, so we use the raw hex here.
+const POSTAL_BLUE_HEX = "#2464a0";
+
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4;
 
 interface StageInfo {
@@ -33,70 +37,124 @@ const STAGES: StageInfo[] = [
   },
 ];
 
-function Mailbox({
+/** USPS-style collection box rendered entirely in SVG.
+ *  Caller wraps with <g transform="translate(bx, by)"> for positioning.
+ *  Internal coordinates: 96 wide × 130 tall, grounded at y=130. */
+function CollectionBox({
   active,
   passed,
-  stageIndex,
+  label,
 }: {
   active: boolean;
   passed: boolean;
-  stageIndex: number;
+  label: string;
 }) {
-  const label = STAGES[stageIndex].label;
+  const bodyColor = passed
+    ? "var(--postal-red)"
+    : active
+      ? "var(--postal-blue)"
+      : "#1a4a78";
+
   return (
-    <g className={active ? "mailbox-glowing" : ""}>
+    <g>
+      {/* Legs */}
+      <rect x="18" y="108" width="10" height="22" rx="2" fill="#0f2d4a" />
+      <rect x="68" y="108" width="10" height="22" rx="2" fill="#0f2d4a" />
+
+      {/* Main body */}
+      <rect x="0" y="18" width="96" height="92" rx="6" fill={bodyColor} />
+
+      {/* Curved cap */}
+      <ellipse cx="48" cy="18" rx="48" ry="10" fill={bodyColor} />
+
+      {/* Top highlight stripe */}
+      <ellipse
+        cx="48"
+        cy="18"
+        rx="44"
+        ry="7"
+        fill="none"
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="2"
+      />
+
+      {/* Mail slot */}
+      <rect x="18" y="40" width="60" height="6" rx="3" fill="#0f2d4a" />
       <rect
         x="18"
-        y="44"
-        width="4"
-        height="22"
-        rx="1"
-        fill="var(--postal-green-dark)"
-      />
-      <rect
-        x="4"
-        y="26"
-        width="32"
-        height="20"
-        rx="3"
-        fill={passed ? "var(--postal-red)" : "#8b6340"}
-      />
-      <rect
-        x="10"
-        y="32"
-        width="20"
+        y="40"
+        width="60"
         height="3"
         rx="1.5"
-        fill="rgba(0,0,0,0.25)"
+        fill="rgba(0,0,0,0.3)"
       />
-      {passed && (
-        <g style={{ animation: "flag-raise 0.4s ease-out both" }}>
-          <rect x="36" y="18" width="2" height="12" fill="#c8a060" />
-          <polygon points="38,18 38,26 46,22" fill="var(--postal-red)" />
-        </g>
-      )}
-      {active && (
-        <circle
-          cx="20"
-          cy="18"
-          r="4"
-          fill="var(--postal-amber)"
-          opacity="0.9"
-        />
-      )}
-      {(active || passed) && (
-        <text
-          x="20"
-          y="14"
-          textAnchor="middle"
-          fontSize="7"
-          fill={active ? "var(--postal-amber)" : "var(--postal-ink-muted)"}
-          fontFamily="var(--font-serif), serif"
-          fontStyle="italic"
+
+      {/* Status panel background */}
+      <rect
+        x="10"
+        y="56"
+        width="76"
+        height="42"
+        rx="3"
+        fill="var(--postal-paper-2)"
+        stroke="var(--postal-ink-faint)"
+        strokeWidth="0.75"
+      />
+
+      {/* Status label — foreignObject for rich typography */}
+      <foreignObject x="10" y="56" width="76" height="42">
+        <div
+          // @ts-expect-error — xmlns required for SVG foreignObject
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "4px 6px",
+            boxSizing: "border-box",
+          }}
         >
-          {label}
-        </text>
-      )}
+          <span
+            style={{
+              fontFamily: "var(--font-serif), Georgia, serif",
+              fontSize: "8.5px",
+              lineHeight: 1.3,
+              color: "var(--postal-ink)",
+              textAlign: "center",
+              fontStyle: active ? "italic" : "normal",
+              fontWeight: passed ? 600 : 400,
+              display: "block",
+            }}
+          >
+            {passed ? "✓ " + label : label}
+          </span>
+        </div>
+      </foreignObject>
+
+      {/* COLLECTION BOX micro-label */}
+      <text
+        x="48"
+        y="106"
+        textAnchor="middle"
+        fontSize="5.5"
+        fill="rgba(255,255,255,0.55)"
+        fontFamily="var(--font-serif), serif"
+        letterSpacing="0.8"
+      >
+        COLLECTION BOX
+      </text>
+
+      {/* Left bevel highlight */}
+      <rect
+        x="0"
+        y="22"
+        width="4"
+        height="84"
+        rx="2"
+        fill="rgba(255,255,255,0.12)"
+      />
     </g>
   );
 }
@@ -158,11 +216,14 @@ async function fetchReportWithProgress(
 export function AnalysisJourney({
   postUrl,
   forceRefresh,
+  cachedReport,
   onComplete,
   onReset,
 }: {
   postUrl: string;
   forceRefresh?: boolean;
+  /** When set, skip the API call and animate through stages using this report. */
+  cachedReport?: PostcardReport | null;
   onComplete: (report: PostcardReport) => void;
   onReset: () => void;
 }) {
@@ -171,7 +232,6 @@ export function AnalysisJourney({
   const [stageDetail, setStageDetail] = useState("Evidence en route…");
   const [error, setError] = useState<string | null>(null);
   const [failedReport, setFailedReport] = useState<PostcardReport | null>(null);
-  const pendingReport = useRef<PostcardReport | null>(null);
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
 
@@ -180,23 +240,48 @@ export function AnalysisJourney({
   }, [onComplete]);
 
   useEffect(() => {
-    const originalTitle = document.title;
-    if (error) {
-      document.title = "Analysis Failed | Postcard";
-    } else {
-      document.title = `${stageLabel} | Postcard`;
-    }
-    return () => {
-      document.title = originalTitle;
-    };
+    document.title = error
+      ? "Analysis Failed | Postcard"
+      : `${stageLabel} | Postcard`;
   }, [stageLabel, error]);
 
   useEffect(() => {
+    // ── Cached-report fast-path ─────────────────────────────────────
+    // Report is already available; animate through stages for the minimum
+    // display time, then hand off to the parent.
+    if (cachedReport) {
+      const steps: [number, AnalysisStage, string, string][] = [
+        [200,  1, STAGES[0].label, STAGES[0].detail],
+        [900,  2, STAGES[1].label, STAGES[1].detail],
+        [1600, 3, STAGES[2].label, STAGES[2].detail],
+        [2300, 4, "Complete",      "Evidence authenticated."],
+      ];
+
+      const timers = steps.map(([delay, s, label, detail]) =>
+        setTimeout(() => {
+          setStage(s);
+          setStageLabel(label);
+          setStageDetail(detail);
+        }, delay),
+      );
+
+      const doneTimer = setTimeout(() => {
+        if (!hasCompletedRef.current) {
+          hasCompletedRef.current = true;
+          onCompleteRef.current(cachedReport);
+        }
+      }, 2900);
+
+      return () => {
+        [...timers, doneTimer].forEach(clearTimeout);
+      };
+    }
+
+    // ── Live SSE path ───────────────────────────────────────────────
     fetchReportWithProgress(
       postUrl,
       (progress) => {
         const { stage: serverStage, message, progress: pct } = progress;
-
         setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
         setStageDetail(message);
 
@@ -221,12 +306,10 @@ export function AnalysisJourney({
               "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
           );
           setFailedReport(report);
-          if (!hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-          }
+          hasCompletedRef.current = true;
           return;
         }
-        pendingReport.current = report;
+
         if (!hasCompletedRef.current) {
           hasCompletedRef.current = true;
           setTimeout(() => onCompleteRef.current(report), 800);
@@ -236,19 +319,7 @@ export function AnalysisJourney({
         setError(err instanceof Error ? err.message : "Analysis failed");
         console.error("Analysis failed:", err);
       });
-  }, [postUrl, forceRefresh]);
-
-  const planeX =
-    stage === 0
-      ? -60
-      : stage === 1
-        ? 220
-        : stage === 2
-          ? 500
-          : stage === 3
-            ? 780
-            : 1300;
-  const planeY = stage === 0 ? 160 : 150;
+  }, [postUrl, forceRefresh, cachedReport]);
 
   return (
     <div
@@ -264,82 +335,100 @@ export function AnalysisJourney({
         )`,
       }}
     >
+      {/* Static paper plane — top-left sky */}
+      <div
+        className="absolute pointer-events-none"
+        style={{ top: "8%", left: "6%" }}
+      >
+        <PaperPlane className="w-28 h-auto drop-shadow-md opacity-90" />
+      </div>
+
+      {/* Landscape + Collection Boxes */}
       <div className="absolute inset-x-0" style={{ top: "15%" }}>
         <svg
-          viewBox="0 0 1200 320"
+          viewBox="0 0 1200 380"
           className="w-full"
           preserveAspectRatio="xMidYMax meet"
           aria-hidden
         >
-          <Cloud cx={100} cy={40} scale={1.1} delay={0} />
-          <Cloud cx={450} cy={20} scale={0.8} delay={3} />
+          {/* Clouds */}
+          <Cloud cx={380} cy={20} scale={0.8} delay={3} />
           <Cloud cx={800} cy={50} scale={1.0} delay={6} />
           <Cloud cx={1050} cy={25} scale={0.7} delay={2} />
           <Cloud cx={280} cy={70} scale={0.55} delay={9} />
 
+          {/* Rolling hills */}
           <path
-            d="M0,200 C200,140 400,175 600,155 C800,130 1000,168 1200,150 L1200,320 L0,320 Z"
+            d="M0,220 C200,160 400,195 600,175 C800,150 1000,188 1200,170 L1200,380 L0,380 Z"
             fill="var(--postal-green-far)"
             opacity="0.65"
           />
           <path
-            d="M0,235 C150,195 350,220 550,208 C750,194 950,224 1200,212 L1200,320 L0,320 Z"
+            d="M0,255 C150,215 350,240 550,228 C750,214 950,244 1200,232 L1200,380 L0,380 Z"
             fill="var(--postal-green-mid)"
             opacity="0.75"
           />
+          {/* Dirt path */}
           <path
-            d="M0,278 Q300,265 500,272 Q700,278 900,268 Q1050,260 1200,270"
+            d="M0,298 Q300,285 500,292 Q700,298 900,288 Q1050,280 1200,290"
             fill="none"
             stroke="var(--postal-path)"
-            strokeWidth="5"
+            strokeWidth="6"
             opacity="0.5"
           />
           <path
-            d="M0,280 C100,265 300,275 500,270 C700,264 900,278 1200,272 L1200,320 L0,320 Z"
+            d="M0,300 C100,285 300,295 500,290 C700,284 900,298 1200,292 L1200,380 L0,380 Z"
             fill="var(--postal-green-near)"
           />
 
-          {STAGES.map((s, i) => (
-            <g
-              key={i}
-              transform={`translate(${(s.mailboxX / 100) * 1200 - 20}, 240)`}
-            >
-              <Mailbox
-                stageIndex={i}
-                active={stage === i + 1}
-                passed={stage > i + 1 || stage === i + 1}
-              />
-            </g>
-          ))}
+          {/* Collection Boxes
+              Each box is 96 wide × 130 tall.
+              The outer <g> carries the static SVG translate so that motion.g
+              only needs to animate scale — no coordinate conflict. */}
+          {STAGES.map((s, i) => {
+            const cx = (s.mailboxX / 100) * 1200;
+            const bx = cx - 48;
+            const by = 298 - 130; // ground line y≈298, box is 130 tall
+            const isActive = stage === i + 1;
+            const isPassed = stage > i + 1;
+
+            return (
+              <g key={i} transform={`translate(${bx}, ${by})`}>
+                <motion.g
+                  animate={{
+                    scale: isActive ? 1.1 : 1.0,
+                    // Use the resolved hex — CSS variables are not interpolatable
+                    // by the browser animation engine.
+                    filter: isActive
+                      ? `drop-shadow(0 0 12px ${POSTAL_BLUE_HEX})`
+                      : "drop-shadow(0 0 0px rgba(0,0,0,0))",
+                  }}
+                  transition={{ duration: 0.5, ease: EASE }}
+                  style={{
+                    // transform-box: fill-box makes transform-origin relative
+                    // to the element's own bounding box, not the SVG viewport.
+                    transformBox: "fill-box" as never,
+                    transformOrigin: "center",
+                  }}
+                >
+                  <CollectionBox
+                    active={isActive}
+                    passed={isPassed}
+                    label={s.label}
+                  />
+                </motion.g>
+              </g>
+            );
+          })}
         </svg>
       </div>
 
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ top: "18%" }}
-        animate={{
-          left: `${((planeX + 60) / 1200) * 100}%`,
-          y: planeY - 150,
-        }}
-        transition={{
-          duration: stage === 0 ? 0 : 2.4,
-          ease: EASE,
-        }}
-      >
-        <div
-          style={{
-            animation:
-              stage < 4 ? "plane-bob 2.5s ease-in-out infinite" : "none",
-          }}
-        >
-          <PaperPlane className="w-24 h-auto drop-shadow-md" />
-        </div>
-      </motion.div>
-
+      {/* Status card — top center */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
         <AnimatePresence mode="wait">
-          {error && (
+          {error ? (
             <motion.div
+              key="error"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
@@ -406,9 +495,7 @@ export function AnalysisJourney({
                 </div>
               )}
             </motion.div>
-          )}
-
-          {!error && (
+          ) : (
             <motion.div
               key={stageLabel}
               initial={{ opacity: 0, y: -10 }}
