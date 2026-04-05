@@ -219,7 +219,15 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
   const isVerified = score >= 0.9;
 
   const [displayPct, setDisplayPct] = useState(0);
+  const [copied, setCopied] = useState(false);
   const rafRef = useRef<number>(0);
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/${report.triangulation.targetUrl}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     const duration = 1600;
@@ -295,6 +303,27 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               >
                 {verdict}
               </p>
+
+              <button
+                onClick={handleShare}
+                className="mt-6 flex items-center gap-2 group transition-all duration-300"
+              >
+                <div
+                  className="flex items-center gap-2 px-4 py-2 text-[10px] tracking-widest uppercase font-bold transition-all duration-300 group-hover:scale-105"
+                  style={{
+                    background: copied ? "var(--postal-blue)" : "var(--postal-paper)",
+                    color: copied ? "var(--postal-paper)" : "var(--postal-blue)",
+                    border: "1px solid var(--postal-blue)",
+                  }}
+                >
+                  {copied ? (
+                    <ShieldCheck size={14} weight="fill" />
+                  ) : (
+                    <ShareNetwork size={14} />
+                  )}
+                  {copied ? "Copied to Clipboard" : "Share Forensic Link"}
+                </div>
+              </button>
             </div>
           </motion.div>
 
@@ -646,14 +675,14 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               border: "1px solid var(--postal-ink-faint)",
               background: "var(--postal-paper)",
             }}
-            onClick={async () => {
-              const url = `${window.location.origin}/${report.triangulation.targetUrl}`;
-              await navigator.clipboard.writeText(url);
-              alert("Share link copied to clipboard!");
-            }}
+            onClick={handleShare}
           >
-            <ShareNetwork size={14} />
-            Copy Share Link
+            {copied ? (
+              <ShieldCheck size={14} weight="fill" />
+            ) : (
+              <ShareNetwork size={14} />
+            )}
+            {copied ? "Copied" : "Copy Share Link"}
           </button>
 
           <button
