@@ -230,8 +230,9 @@ export default function PostcardsClient({
 
   return (
     <main>
-      <Hero />
-      <DropZone onUrlSubmitted={handleUrlSubmitted} />
+      <Hero>
+        <DropZone onUrlSubmitted={handleUrlSubmitted} />
+      </Hero>
     </main>
   );
 }

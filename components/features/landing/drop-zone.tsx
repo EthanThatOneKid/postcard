@@ -35,19 +35,18 @@ function AnimatedPlaceholder() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        style={{
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          textAlign: "center",
-        }}
+        className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none px-3"
+        style={{ color: "var(--postal-ink-muted)" }}
       >
-        {PLACEHOLDER_URLS[index]}
+        <span className="truncate text-sm" style={{ fontFamily: "var(--font-serif)" }}>
+          {PLACEHOLDER_URLS[index]}
+        </span>
       </motion.span>
     </AnimatePresence>
   );
 }
+
+// ── Airmail animation overlay (full-screen, fixed) ─────────────────────────
 
 type AnimStage = "envelope" | "folding" | "airplane" | "flying";
 
@@ -110,7 +109,7 @@ function AirmailAnimation({
             animate={{ scale: 1, opacity: 1, rotateZ: 0 }}
             exit={{ scaleY: 0.08, opacity: 0, rotateX: 90 }}
             transition={{ duration: 0.55, ease: EASE }}
-            className="relative w-80 h-52 rounded-sm shadow-2xl overflow-hidden"
+            className="relative w-80 h-52 shadow-2xl overflow-hidden"
             style={{
               background: "var(--postal-paper)",
               border: "2px solid var(--postal-ink-muted)",
@@ -165,7 +164,7 @@ function AirmailAnimation({
               }}
             />
 
-            <div className="absolute inset-3 mt-3 mb-3 flex items-center justify-center overflow-hidden rounded-[2px]">
+            <div className="absolute inset-3 mt-3 mb-3 flex items-center justify-center overflow-hidden">
               <span
                 className="text-xs truncate px-2"
                 style={{
@@ -179,12 +178,12 @@ function AirmailAnimation({
 
             <div className="absolute top-4 right-4 flex gap-1">
               <div
-                className="w-5 h-5 rounded-full border-2"
-                style={{ borderColor: "var(--postal-red)" }}
+                className="w-5 h-5 border-2"
+                style={{ borderColor: "var(--postal-red)", borderRadius: "50%" }}
               />
               <div
-                className="w-5 h-5 rounded-full border-2"
-                style={{ borderColor: "var(--postal-blue)" }}
+                className="w-5 h-5 border-2"
+                style={{ borderColor: "var(--postal-blue)", borderRadius: "50%" }}
               />
             </div>
 
@@ -210,7 +209,7 @@ function AirmailAnimation({
             className="relative"
           >
             <div
-              className="w-64 h-32 rounded-sm shadow-xl flex items-center justify-center"
+              className="w-64 h-32 shadow-xl flex items-center justify-center"
               style={{
                 background: "var(--postal-paper-2)",
                 border: "1px solid var(--postal-ink-muted)",
@@ -294,6 +293,10 @@ function AirmailAnimation({
   );
 }
 
+// ── DropZone ───────────────────────────────────────────────────────────────
+// Renders as a compact, grounded input panel — no outer section wrapper.
+// Designed to be embedded inside <Hero> as children, sitting on the green field.
+
 export function DropZone({
   onUrlSubmitted,
 }: {
@@ -327,6 +330,7 @@ export function DropZone({
 
   return (
     <>
+      {/* Full-screen airmail dispatch animation overlay */}
       <AnimatePresence>
         {animating && postUrl && (
           <AirmailAnimation
@@ -336,160 +340,109 @@ export function DropZone({
         )}
       </AnimatePresence>
 
-      <section
-        className="w-full px-6 pb-20 pt-4"
-        style={{ background: "var(--postal-paper)" }}
+      {/* Grounded input panel */}
+      <div
+        className="w-full max-w-md"
+        style={{
+          background: "var(--postal-paper-2)",
+          border: "1px solid var(--postal-ink-muted)",
+          boxShadow: "0 8px 32px rgba(44,36,22,0.18)",
+        }}
+        role="region"
+        aria-label="Post URL submission"
       >
-        <div className="mx-auto max-w-xl">
-          <div className="text-center mb-6">
-            <h2
-              className="text-2xl font-semibold italic mb-1"
-              style={{
-                fontFamily: "var(--font-display), serif",
-                color: "var(--postal-ink)",
-              }}
-            >
-              Submit Your Post URL
-            </h2>
-            <p
-              className="text-sm"
+        {/* Airmail accent stripe — visual separator at panel top */}
+        <div
+          className="h-2"
+          style={{
+            backgroundImage: `repeating-linear-gradient(
+              -45deg,
+              var(--postal-red) 0px, var(--postal-red) 4px,
+              transparent 4px, transparent 8px,
+              var(--postal-blue) 8px, var(--postal-blue) 12px,
+              transparent 12px, transparent 16px
+            )`,
+          }}
+        />
+
+        <div className="px-8 py-6 flex flex-col items-center gap-4">
+          {/* Section label — postal uppercase pattern */}
+          <p
+            className="text-[11px] tracking-[0.35em] uppercase"
+            style={{
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-ink-muted)",
+            }}
+          >
+            Submit a Post URL
+          </p>
+
+          {/* URL input */}
+          <div className="relative w-full">
+            <label htmlFor="post-url-input" className="sr-only">
+              Post URL
+            </label>
+            <input
+              id="post-url-input"
+              ref={inputRef}
+              type="url"
+              aria-label="Enter social media post URL"
+              className="w-full h-11 px-3 text-sm text-center bg-transparent"
               style={{
                 fontFamily: "var(--font-serif)",
-                color: "var(--postal-ink-muted)",
-                fontStyle: "italic",
+                color: "var(--postal-ink)",
+                border: "1px solid var(--postal-ink-muted)",
+                borderRadius: 0,
+                outline: "none",
               }}
-            >
-              Enter the URL of the social media post you wish to trace.
-            </p>
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmit(e.currentTarget.value);
+              }}
+            />
+            {/* Animated URL placeholder — only visible when input is unfocused and empty */}
+            {!isFocused && (
+              <AnimatedPlaceholder />
+            )}
           </div>
 
-          <div
-            className="relative"
+          {/* Submit button — solid, high-contrast */}
+          <button
+            type="button"
+            className="w-full py-2.5 text-sm tracking-widest uppercase transition-colors duration-150"
             style={{
-              boxShadow: `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-ink-muted), 0 4px 16px rgba(44,36,22,0.1)`,
-              borderRadius: "2px",
-              background: "var(--postal-paper)",
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-paper)",
+              background: "var(--postal-ink)",
+              border: "1px solid var(--postal-ink)",
+              borderRadius: 0,
             }}
-            role="region"
-            aria-label="Post URL input"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--postal-ink-muted)";
+              e.currentTarget.style.borderColor = "var(--postal-ink-muted)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "var(--postal-ink)";
+              e.currentTarget.style.borderColor = "var(--postal-ink)";
+            }}
+            onClick={() => handleSubmit(inputRef.current?.value ?? "")}
           >
-            <div
-              className="h-3 rounded-t-[2px]"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-                  -45deg,
-                  var(--postal-red) 0px, var(--postal-red) 6px,
-                  transparent 6px, transparent 12px,
-                  var(--postal-blue) 12px, var(--postal-blue) 18px,
-                  transparent 18px, transparent 24px
-                )`,
-              }}
-            />
+            Trace Post
+          </button>
 
-            <div className="m-6 flex flex-col items-center">
-              <label htmlFor="post-url-input" className="sr-only">
-                Post URL
-              </label>
-              <div
-                className="relative w-full max-w-sm"
-                style={{
-                  background: "var(--postal-paper-2)",
-                  border: "1px solid var(--postal-ink-muted)",
-                  borderRadius: "2px",
-                }}
-              >
-                <input
-                  id="post-url-input"
-                  ref={inputRef}
-                  type="url"
-                  placeholder="https://x.com/user/status/1234567890"
-                  aria-label="Enter social media post URL"
-                  className="w-full px-4 py-3 text-sm text-center bg-transparent"
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    color: "var(--postal-ink)",
-                    outline: "none",
-                  }}
-                  onFocus={(e) => {
-                    setIsFocused(true);
-                    e.currentTarget.style.borderColor = "var(--postal-ink)";
-                  }}
-                  onBlur={(e) => {
-                    setIsFocused(false);
-                    e.currentTarget.style.borderColor =
-                      "var(--postal-ink-muted)";
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSubmit(e.currentTarget.value);
-                    }
-                  }}
-                />
-                {!isFocused && (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                    style={{
-                      background: "var(--postal-paper-2)",
-                      borderRadius: "2px",
-                    }}
-                    aria-hidden="true"
-                  >
-                    <AnimatedPlaceholder />
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                className="mt-4 px-6 py-2 text-sm transition-all duration-150"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-paper)",
-                  background: "var(--postal-ink)",
-                  border: "1px solid var(--postal-ink)",
-                  borderRadius: "2px",
-                  letterSpacing: "0.04em",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--postal-ink-muted)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--postal-ink)";
-                }}
-                onClick={() => {
-                  const url = inputRef.current?.value ?? "";
-                  handleSubmit(url);
-                }}
-              >
-                Trace Post
-              </button>
-
-              <p
-                className="mt-5 text-xs tracking-widest uppercase"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                x.com &nbsp;·&nbsp; bluesky.app &nbsp;·&nbsp; threads.net
-              </p>
-            </div>
-
-            <div
-              className="h-3 rounded-b-[2px]"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-                  -45deg,
-                  var(--postal-red) 0px, var(--postal-red) 6px,
-                  transparent 6px, transparent 12px,
-                  var(--postal-blue) 12px, var(--postal-blue) 18px,
-                  transparent 18px, transparent 24px
-                )`,
-              }}
-            />
-          </div>
+          {/* Supported platforms */}
+          <p
+            className="text-[10px] tracking-widest uppercase"
+            style={{
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-ink-muted)",
+            }}
+          >
+            x.com &nbsp;·&nbsp; bluesky &nbsp;·&nbsp; threads &nbsp;·&nbsp; reddit
+          </p>
         </div>
-      </section>
+      </div>
     </>
   );
 }

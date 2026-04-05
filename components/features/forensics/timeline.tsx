@@ -250,26 +250,33 @@ export function TravelTimeline({
         label="Audit Trail"
       >
         <div className="flex flex-col gap-1.5">
-          {audit.auditLog.map((entry: string, i: number) => (
-            <div key={i} className="flex items-start gap-2">
-              <span
-                className="mt-px shrink-0 px-1 text-[9px] leading-tight text-center tabular-nums"
-                style={{
-                  background: "var(--postal-ink-muted)",
-                  color: "var(--postal-paper)",
-                  minWidth: "20px",
-                }}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "var(--postal-ink)" }}
-              >
-                {entry}
-              </p>
-            </div>
-          ))}
+          {audit.auditLog.map((entry: string, i: number) => {
+            const parsed = parseAuditJson(entry);
+            return (
+              <div key={i} className="flex items-start gap-2">
+                <span
+                  className="mt-px shrink-0 px-1 text-[9px] leading-tight text-center tabular-nums"
+                  style={{
+                    background: "var(--postal-ink-muted)",
+                    color: "var(--postal-paper)",
+                    minWidth: "20px",
+                  }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                {parsed ? (
+                  <AuditJsonEntry data={parsed} />
+                ) : (
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: "var(--postal-ink)" }}
+                  >
+                    {entry}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </TimelineNode>
 
@@ -296,6 +303,100 @@ export function TravelTimeline({
         </p>
       </TimelineNode>
     </>
+  );
+}
+
+interface AuditVerificationStep {
+  details: string;
+  status: "success" | "failure" | string;
+}
+
+interface AuditLogFields {
+  url_verification?: AuditVerificationStep;
+  timestamp_alignment?: AuditVerificationStep;
+  ui_elements_match?: AuditVerificationStep;
+}
+
+interface AuditJsonData {
+  audit_log: AuditLogFields;
+}
+
+function parseAuditJson(entry: string): AuditLogFields | null {
+  const match = entry.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    const data = JSON.parse(match[0]);
+    if (data && typeof data === "object" && "audit_log" in data) {
+      return data.audit_log as AuditLogFields;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const STEP_LABELS: Record<keyof AuditLogFields, string> = {
+  url_verification: "URL Verification",
+  timestamp_alignment: "Timestamp Alignment",
+  ui_elements_match: "UI Elements Match",
+};
+
+function AuditJsonEntry({ data }: { data: AuditLogFields }) {
+  const steps = (
+    Object.keys(STEP_LABELS) as (keyof AuditLogFields)[]
+  ).filter((key) => data[key] !== undefined);
+
+  return (
+    <div
+      className="flex-1 flex flex-col gap-1.5 p-2"
+      style={{
+        background: "var(--postal-paper-2)",
+        border: "1px solid var(--postal-ink-muted)",
+      }}
+    >
+      {steps.map((key) => {
+        const step = data[key]!;
+        const isSuccess = step.status === "success";
+        const statusColor = isSuccess
+          ? "var(--postal-green-near)"
+          : "var(--postal-red)";
+        const statusBg = isSuccess
+          ? "var(--postal-green-faint)"
+          : "var(--postal-red-faint)";
+
+        return (
+          <div key={key} className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[9px] tracking-widest uppercase"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-blue)",
+                }}
+              >
+                {STEP_LABELS[key]}
+              </span>
+              <span
+                className="shrink-0 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter"
+                style={{
+                  background: statusBg,
+                  color: statusColor,
+                  border: "1px solid currentColor",
+                }}
+              >
+                {step.status}
+              </span>
+            </div>
+            <p
+              className="text-[10px] leading-relaxed"
+              style={{ color: "var(--postal-ink-muted)" }}
+            >
+              {step.details}
+            </p>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

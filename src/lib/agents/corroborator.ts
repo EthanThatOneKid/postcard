@@ -111,7 +111,7 @@ export async function corroboratePostcard(
   log(`Starting search grounding for ${postcard.platform} post...`);
 
   const { fullStream } = await streamText({
-    model: googleProvider("gemini-1.5-flash"),
+    model: googleProvider("gemini-2.0-flash"),
     tools: {
       google_search: googleProvider.tools.googleSearch({}),
     },
@@ -215,7 +215,7 @@ Use the google_search tool to execute your searches.`,
     .join("\n");
 
   const { text: verdictText } = await generateText({
-    model: googleProvider("gemini-1.5-flash"),
+    model: googleProvider("gemini-2.0-flash"),
     system: `You are a forensic media analyst. Based on the search results, provide a structured verdict about whether the social media post is TRUE, FALSE, or UNCERTAIN.
 
 IMPORTANT: Your job is to be CRITICAL and SKEPTICAL. Social media is full of misinformation. Consider:

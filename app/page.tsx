@@ -1,12 +1,10 @@
 "use client";
 
-import { motion } from "motion/react";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { LandingHook } from "@/components/features/landing";
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Hero, LandingHook, DropZone } from "@/components/features/landing";
 import { Footer } from "@/components/ui/footer";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { normalizePostUrl } from "@/src/lib/url";
 
 const AIRMAIL_BG = `repeating-linear-gradient(
   -45deg,
@@ -17,66 +15,32 @@ const AIRMAIL_BG = `repeating-linear-gradient(
 )`;
 
 export default function Home() {
+  const router = useRouter();
+
+  const handleUrlSubmitted = useCallback(
+    (url: string) => {
+      const normalized = normalizePostUrl(url);
+      router.push(`/postcards?url=${encodeURIComponent(normalized)}`);
+    },
+    [router],
+  );
+
   return (
     <main>
-      <LandingHook />
+      {/* Primary hero — URL submission form lives in the sky */}
+      <Hero>
+        <DropZone onUrlSubmitted={handleUrlSubmitted} />
+      </Hero>
 
+      {/* Airmail stripe — sharp visual separator between hero and features */}
       <div
         className="h-2"
         style={{ backgroundImage: AIRMAIL_BG }}
         aria-hidden="true"
       />
 
-      <section
-        aria-label="Get started"
-        className="px-6"
-        style={{ background: "var(--postal-paper)" }}
-      >
-        <motion.div
-          data-motion
-          className="mx-auto max-w-xl py-20 flex flex-col items-center gap-6 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.65, ease: EASE }}
-        >
-          <p
-            className="text-[11px] tracking-[0.3em] uppercase"
-            style={{
-              fontFamily: "var(--font-serif)",
-              color: "var(--postal-ink-muted)",
-            }}
-          >
-            Ready to authenticate?
-          </p>
-
-          <p
-            className="leading-snug italic"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(1.2rem, 3vw, 1.6rem)",
-              color: "var(--postal-ink)",
-            }}
-          >
-            Every screenshot tells a story.
-            <br />
-            We help you find the one that&apos;s true.
-          </p>
-
-          <Link
-            href="/postcards"
-            className="inline-flex items-center gap-3 min-h-[44px] px-10 text-sm tracking-widest uppercase"
-            style={{
-              fontFamily: "var(--font-serif)",
-              color: "var(--postal-ink)",
-              border: "1px solid var(--postal-ink)",
-              background: "var(--postal-paper)",
-            }}
-          >
-            Enter Postcard
-            <ArrowRight size={14} aria-hidden="true" />
-          </Link>
-        </motion.div>
-      </section>
+      {/* Feature marketing section */}
+      <LandingHook />
 
       <Footer />
     </main>

@@ -191,17 +191,6 @@
   }
 }
 
-@keyframes flag-raise {
-  from {
-    transform: scaleY(0);
-    transform-origin: bottom center;
-  }
-  to {
-    transform: scaleY(1);
-    transform-origin: bottom center;
-  }
-}
-
 @keyframes mailbox-glow {
   0%,
   100% {
@@ -209,16 +198,6 @@
   }
   50% {
     filter: drop-shadow(0 0 10px rgba(100, 168, 80, 0.9));
-  }
-}
-
-@keyframes plane-bob {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-8deg);
-  }
-  50% {
-    transform: translateY(-6px) rotate(-5deg);
   }
 }
 
