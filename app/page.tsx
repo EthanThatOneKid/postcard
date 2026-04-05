@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight } from "lucide-react";
 import { LandingHook } from "@/components/features/landing";
 import { Footer } from "@/components/ui/footer";
 

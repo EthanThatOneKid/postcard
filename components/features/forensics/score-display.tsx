@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Clock, Fingerprint, ShieldCheck } from "@phosphor-icons/react";
+import { Clock, Fingerprint, ShieldCheck } from "lucide-react";
 import { CancelStamp } from "@/components/illustrations";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -89,10 +89,12 @@ export function ScoreDisplay({
   score,
   displayPct,
   isVerified,
+  reason,
 }: {
   score: number;
   displayPct: number;
   isVerified: boolean;
+  reason?: string;
 }) {
   const color = scoreColor(score);
   const verdict = scoreVerdict(score);
@@ -139,6 +141,14 @@ export function ScoreDisplay({
       >
         {verdict}
       </p>
+      {reason && (
+        <p
+          className="mt-2 max-w-[280px] text-center text-[10px] leading-relaxed italic opacity-80"
+          style={{ color: "var(--postal-ink)" }}
+        >
+          &ldquo;{reason}&rdquo;
+        </p>
+      )}
     </div>
   );
 }
@@ -156,25 +166,20 @@ export function MetaStamps({
     <div className="flex flex-wrap justify-center gap-2">
       <MetaStamp
         icon={
-          <ShieldCheck size={11} style={{ color: "var(--postal-ink-muted)" }} />
+          <ShieldCheck size={11} className="text-[var(--postal-ink-muted)]" />
         }
         text={platform}
       />
       {timestampText && (
         <MetaStamp
-          icon={
-            <Clock size={11} style={{ color: "var(--postal-ink-muted)" }} />
-          }
+          icon={<Clock size={11} className="text-[var(--postal-ink-muted)]" />}
           text={timestampText}
         />
       )}
       {username && (
         <MetaStamp
           icon={
-            <Fingerprint
-              size={11}
-              style={{ color: "var(--postal-ink-muted)" }}
-            />
+            <Fingerprint size={11} className="text-[var(--postal-ink-muted)]" />
           }
           text={username}
         />

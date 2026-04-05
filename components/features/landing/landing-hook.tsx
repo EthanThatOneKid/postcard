@@ -1,23 +1,23 @@
 "use client";
 
 import { motion } from "motion/react";
-import { MagnifyingGlass, MapTrifold, Seal } from "@phosphor-icons/react";
+import { Search, Map, BadgeCheck } from "lucide-react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const FEATURES = [
   {
-    Icon: MagnifyingGlass,
+    Icon: Search,
     title: "Spot the Fabricated",
     body: "Cross-reference screenshots against live post metadata. Surface alterations in captions, timestamps, and engagement counts.",
   },
   {
-    Icon: MapTrifold,
+    Icon: Map,
     title: "Trace the Origin",
     body: "Navigate from screenshot to primary source URL using AI-guided forensic search and platform-specific dorking.",
   },
   {
-    Icon: Seal,
+    Icon: BadgeCheck,
     title: "Trust the Source",
     body: "Corroborate claims against a vetted allowlist of journalism, government, and academic institutions.",
   },

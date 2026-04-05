@@ -114,11 +114,11 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 
 **Body:**
 
-| Field          | Required | Type    | Description                        |
-| :------------- | :------- | :------ | :--------------------------------- |
-| `url`      | Yes      | string  | The social media post URL          |
-| `userApiKey`| No       | string  | Optional API key for rate limiting |
-| `refresh`   | No       | boolean | Force re-analysis even if cached   |
+| Field        | Required | Type    | Description                        |
+| :----------- | :------- | :------ | :--------------------------------- |
+| `url`        | Yes      | string  | The social media post URL          |
+| `userApiKey` | No       | string  | Optional API key for rate limiting |
+| `refresh`    | No       | boolean | Force re-analysis even if cached   |
 
 **Request:**
 

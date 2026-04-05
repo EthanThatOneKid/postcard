@@ -71,7 +71,8 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           status: "not_found",
-          error: "Analysis not found. Use ?refresh=true to initiate a new trace.",
+          error:
+            "Analysis not found. Use ?refresh=true to initiate a new trace.",
         },
         { status: 404, headers: CORS_HEADERS },
       );

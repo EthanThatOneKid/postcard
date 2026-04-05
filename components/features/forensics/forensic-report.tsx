@@ -2,11 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import {
-  ShieldCheck,
-  ShareNetwork,
-  ArrowsClockwise,
-} from "@phosphor-icons/react";
+import { ShieldCheck, Share2, RotateCw, Search } from "lucide-react";
 import type { PostcardReport } from "@/src/api/schemas";
 import { ScoreDisplay, MetaStamps } from "./score-display";
 import { TravelTimeline } from "./timeline";
@@ -45,9 +41,9 @@ function ReportActions({
         onClick={onShare}
       >
         {copied ? (
-          <ShieldCheck size={14} weight="fill" />
+          <ShieldCheck size={14} className="fill-current" />
         ) : (
-          <ShareNetwork size={14} />
+          <Share2 size={14} />
         )}
         {copied ? "Copied" : "Copy Share Link"}
       </button>
@@ -62,7 +58,7 @@ function ReportActions({
         }}
         onClick={onReverify}
       >
-        <ArrowsClockwise size={14} />
+        <RotateCw size={14} />
         Re-verify Latest
       </button>
 
@@ -149,6 +145,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               score={score}
               displayPct={displayPct}
               isVerified={isVerified}
+              reason={corroboration.summary}
             />
           </motion.div>
 
@@ -167,9 +164,9 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               }}
             >
               {copied ? (
-                <ShieldCheck size={14} weight="fill" />
+                <ShieldCheck size={14} className="fill-current" />
               ) : (
-                <ShareNetwork size={14} />
+                <Share2 size={14} />
               )}
               {copied ? "Copied to Clipboard" : "Share Forensic Link"}
             </div>
@@ -186,6 +183,17 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               timestampText={postcard.timestampText}
               username={postcard.username}
             />
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase"
+              style={{
+                border: "1px solid var(--postal-blue)",
+                background: "var(--postal-blue-faint)",
+                color: "var(--postal-blue)",
+              }}
+            >
+              <Search size={12} />
+              Verified via Postcard
+            </div>
           </motion.div>
         </motion.section>
 

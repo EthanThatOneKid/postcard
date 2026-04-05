@@ -107,9 +107,13 @@ export default async function PostcardsPage({ searchParams }: Props) {
     } else if (normalizedUrl && (shouldRefresh || !data)) {
       // Start fresh analysis if refresh=true OR no cached data exists
       const { id } = await createPostcard(normalizedUrl);
-      processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
-        console.error,
-      );
+      processPostcardFromUrl(
+        normalizedUrl,
+        undefined,
+        () => {},
+        true,
+        id,
+      ).catch(console.error);
       processingUrl = normalizedUrl;
 
       // Even on refresh, if we have old data, we can use it for the "replay" mock

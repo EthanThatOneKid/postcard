@@ -46,7 +46,8 @@ export function dbRowToReport(row: PostcardRow, post: PostRow): PostcardReport {
     corroboration: {
       primarySources: JSON.parse(row.primarySources || "[]"),
       queriesExecuted,
-      verdict: (row.verdict || "insufficient_data") as PostcardReport["corroboration"]["verdict"],
+      verdict: (row.verdict ||
+        "insufficient_data") as PostcardReport["corroboration"]["verdict"],
       summary: row.summary ?? "",
       confidenceScore: row.confidenceScore ?? 0,
       corroborationLog: JSON.parse(row.corroborationLog || "[]"),

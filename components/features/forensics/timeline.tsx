@@ -1,9 +1,11 @@
 import {
   MapPin,
-  MagnifyingGlass,
+  Search,
   Clock,
   Fingerprint,
-} from "@phosphor-icons/react";
+  ArrowRight,
+  ShieldCheck,
+} from "lucide-react";
 import type { Corroboration } from "@/src/lib/postcard";
 
 interface TimelineNodeProps {
@@ -56,6 +58,39 @@ export function TimelineNode({
         {children}
       </div>
     </div>
+  );
+}
+
+function CitationText({ text }: { text: string }) {
+  // Matches [[N]](url)
+  const parts = text.split(/(\[\[\d+\]\]\(https?:\/\/[^\)]+\))/g);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = part.match(/\[\[(\d+)\]\]\((https?:\/\/[^\)]+)\)/);
+        if (match) {
+          const [, n, url] = match;
+          return (
+            <a
+              key={i}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center min-w-[14px] h-[14px] px-0.5 text-[8px] font-bold rounded-sm mx-0.5 align-top transition-colors hover:bg-[var(--postal-blue)] hover:text-white"
+              style={{
+                background: "var(--postal-blue-faint)",
+                color: "var(--postal-blue)",
+                border: "1px solid var(--postal-blue-faint)",
+              }}
+            >
+              {n}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
   );
 }
 
@@ -124,13 +159,8 @@ export function TravelTimeline({
       </TimelineNode>
 
       <TimelineNode
-        icon={
-          <MagnifyingGlass
-            size={13}
-            style={{ color: "var(--postal-ink-muted)" }}
-          />
-        }
-        label="Verification Grounding"
+        icon={<Search size={13} className="text-[var(--postal-ink-muted)]" />}
+        label="Triangulation Path"
       >
         <div className="flex flex-col gap-4">
           <div
@@ -142,7 +172,9 @@ export function TravelTimeline({
               borderLeft: "2px solid var(--postal-blue)",
             }}
           >
-            &ldquo;{corroboration.summary}&rdquo;
+            &ldquo;
+            <CitationText text={corroboration.summary} />
+            &rdquo;
           </div>
 
           {corroboration.primarySources.length > 0 && (
@@ -171,7 +203,7 @@ export function TravelTimeline({
                       color: "var(--postal-ink-muted)",
                     }}
                   >
-                    <MagnifyingGlass size={10} />
+                    <Search size={10} />
                     {q.query}
                     <span style={{ color: "var(--postal-ink-muted)" }}>
                       ({q.sourcesFound})
@@ -185,12 +217,7 @@ export function TravelTimeline({
       </TimelineNode>
 
       <TimelineNode
-        icon={
-          <MagnifyingGlass
-            size={13}
-            style={{ color: "var(--postal-ink-muted)" }}
-          />
-        }
+        icon={<Search size={13} className="text-[var(--postal-ink-muted)]" />}
         label="Corroboration Trace"
       >
         <div className="flex flex-col gap-1.5">
@@ -248,7 +275,7 @@ export function TravelTimeline({
 
       <TimelineNode
         icon={
-          <Fingerprint size={13} style={{ color: "var(--postal-ink-muted)" }} />
+          <Fingerprint size={13} className="text-[var(--postal-ink-muted)]" />
         }
         label="Forensic Breakdown"
         isLast
@@ -326,7 +353,6 @@ function ScoreGauge({
 }
 
 import { motion } from "motion/react";
-import { ArrowRight, ShieldCheck } from "@phosphor-icons/react";
 
 function SourceCard({
   source,
@@ -382,7 +408,7 @@ function SourceCard({
           }}
         >
           {source.relevance === "supporting" && (
-            <ShieldCheck size={10} weight="fill" />
+            <ShieldCheck size={10} className="fill-current" />
           )}
           {source.relevance}
         </div>
