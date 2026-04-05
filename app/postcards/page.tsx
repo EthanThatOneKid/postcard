@@ -20,9 +20,9 @@ async function getPostcardsByUrl(url: string) {
     .limit(1);
 
   if (result.length === 0) return null;
-  const { postcards: row, posts: post } = result[0];
+  const { postcards: dbPostcard, posts: post } = result[0];
   return {
-    postcard: PostcardDb.parse(row),
+    dbPostcard: PostcardDb.parse(dbPostcard),
     post: post,
   };
 }
@@ -50,7 +50,7 @@ export async function generateMetadata({ searchParams }: Props) {
     };
   }
 
-  const postcard = data.postcard;
+  const dbPostcard = data.dbPostcard;
   const verdictMap = {
     verified: "✅ Verified",
     disputed: "❌ Disputed",
@@ -59,11 +59,12 @@ export async function generateMetadata({ searchParams }: Props) {
   };
 
   const verdictLabel =
-    verdictMap[postcard.verdict as keyof typeof verdictMap] ?? postcard.verdict;
+    verdictMap[dbPostcard.verdict as keyof typeof verdictMap] ??
+    dbPostcard.verdict;
 
   return {
-    title: `Postcard: ${verdictLabel} (${postcard.postcardScore}/100)`,
-    description: postcard.summary || "View the full corroboration trace.",
+    title: `Postcard: ${verdictLabel} (${dbPostcard.postcardScore}/100)`,
+    description: dbPostcard.summary || "View the full corroboration trace.",
   };
 }
 
@@ -79,11 +80,13 @@ export default async function PostcardsPage({ searchParams }: Props) {
   if (normalizedUrl && !forceRefresh) {
     const data = await getPostcardsByUrl(normalizedUrl);
     if (data) {
-      const queriesExecuted = JSON.parse(data.postcard.queriesExecuted ?? "[]");
+      const queriesExecuted = JSON.parse(
+        data.dbPostcard.queriesExecuted ?? "[]",
+      );
       initialReport = {
         postcard: {
           platform:
-            (data.postcard.platform as
+            (data.dbPostcard.platform as
               | "X"
               | "YouTube"
               | "Reddit"
@@ -95,30 +98,32 @@ export default async function PostcardsPage({ searchParams }: Props) {
         },
         markdown: data.post.markdown || "",
         triangulation: {
-          targetUrl: data.postcard.url,
+          targetUrl: data.dbPostcard.url,
           queries: queriesExecuted.map((q: { query: string }) => q.query),
         },
         audit: {
-          originScore: data.postcard.originScore ?? 0,
-          temporalScore: data.postcard.temporalScore ?? 0,
-          totalScore: data.postcard.postcardScore / 100,
-          auditLog: JSON.parse(data.postcard.auditLog ?? "[]"),
+          originScore: data.dbPostcard.originScore ?? 0,
+          temporalScore: data.dbPostcard.temporalScore ?? 0,
+          totalScore: data.dbPostcard.postcardScore / 100,
+          auditLog: JSON.parse(data.dbPostcard.auditLog ?? "[]"),
         },
         corroboration: {
-          primarySources: JSON.parse(data.postcard.primarySources ?? "[]"),
+          primarySources: JSON.parse(data.dbPostcard.primarySources ?? "[]"),
           queriesExecuted,
           verdict:
-            (data.postcard.verdict as
+            (data.dbPostcard.verdict as
               | "verified"
               | "disputed"
               | "inconclusive"
               | "insufficient_data") ?? "insufficient_data",
-          summary: data.postcard.summary ?? "",
-          confidenceScore: data.postcard.confidenceScore ?? 0,
-          corroborationLog: JSON.parse(data.postcard.corroborationLog ?? "[]"),
+          summary: data.dbPostcard.summary ?? "",
+          confidenceScore: data.dbPostcard.confidenceScore ?? 0,
+          corroborationLog: JSON.parse(
+            data.dbPostcard.corroborationLog ?? "[]",
+          ),
         },
-        timestamp: data.postcard.createdAt.toISOString(),
-        id: data.postcard.id,
+        timestamp: data.dbPostcard.createdAt.toISOString(),
+        id: data.dbPostcard.id,
       };
     }
   } else if (normalizedUrl && forceRefresh) {
