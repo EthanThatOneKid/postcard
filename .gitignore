@@ -39,3 +39,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agents
+.agents/
+.gemini/
+.claude/
+
+# test results
+test-results/
+
+# skills
+skills-lock.json
+
+# drizzle
+drizzle/
+
+# local database
+*.db
+*.db-journal

@@ -130,61 +130,96 @@
   --input: #e8dcc0;
 
   /* Postal palette */
-  --postal-paper:       #fdf6e3;
-  --postal-paper-2:     #f0e6c8;
-  --postal-paper-3:     #e4d5b0;
-  --postal-ink:         #2c2416;
-  --postal-ink-muted:   #7a6a52;
-  --postal-ink-faint:   #c4b49a;
-  --postal-red:         #b83c2b;
-  --postal-blue:        #2464a0;
-  --postal-sky:         #a8d4e8;
-  --postal-sky-mid:     #7bbcd8;
-  --postal-sky-deep:    #5090c0;
-  --postal-cloud:       #f0f8ff;
-  --postal-green-far:   #a8c898;
-  --postal-green-mid:   #72a860;
-  --postal-green-near:  #4a8438;
-  --postal-green-dark:  #2e6020;
-  --postal-wax:         #8b1818;
-  --postal-stamp-bg:    #f4c07a;
-  --postal-amber:       #d4882c;
-  --postal-path:        #c8a878;
+  --postal-paper: #fdf6e3;
+  --postal-paper-2: #f0e6c8;
+  --postal-paper-3: #e4d5b0;
+  --postal-ink: #2c2416;
+  --postal-ink-muted: #7a6a52;
+  --postal-ink-faint: #c4b49a;
+  --postal-red: #b83c2b;
+  --postal-blue: #2464a0;
+  --postal-sky: #a8d4e8;
+  --postal-sky-mid: #7bbcd8;
+  --postal-sky-deep: #5090c0;
+  --postal-cloud: #f0f8ff;
+  --postal-green-far: #a8c898;
+  --postal-green-mid: #72a860;
+  --postal-green-near: #4a8438;
+  --postal-green-dark: #2e6020;
+  --postal-wax: #8b1818;
+  --postal-stamp-bg: #f4c07a;
+  --postal-amber: #d4882c;
+  --postal-path: #c8a878;
 }
 
 @keyframes cloud-drift {
-  0%   { transform: translateX(0px); }
-  100% { transform: translateX(120px); }
+  0% {
+    transform: translateX(0px);
+  }
+  100% {
+    transform: translateX(120px);
+  }
 }
 
 @keyframes cloud-drift-slow {
-  0%   { transform: translateX(0px); }
-  100% { transform: translateX(80px); }
+  0% {
+    transform: translateX(0px);
+  }
+  100% {
+    transform: translateX(80px);
+  }
 }
 
 @keyframes postal-fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes wax-pulse {
-  0%, 100% { filter: drop-shadow(0 0 3px rgba(139,24,24,0.5)); }
-  50%       { filter: drop-shadow(0 0 8px rgba(139,24,24,0.85)); }
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(139, 24, 24, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(139, 24, 24, 0.85));
+  }
 }
 
 @keyframes flag-raise {
-  from { transform: scaleY(0); transform-origin: bottom center; }
-  to   { transform: scaleY(1); transform-origin: bottom center; }
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom center;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: bottom center;
+  }
 }
 
 @keyframes mailbox-glow {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(100,168,80,0.3)); }
-  50%       { filter: drop-shadow(0 0 10px rgba(100,168,80,0.9)); }
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(100, 168, 80, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(100, 168, 80, 0.9));
+  }
 }
 
 @keyframes plane-bob {
-  0%, 100% { transform: translateY(0) rotate(-8deg); }
-  50%       { transform: translateY(-6px) rotate(-5deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-5deg);
+  }
 }
 
 .postal-animate-up {

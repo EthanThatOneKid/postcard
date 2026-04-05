@@ -1,63 +1,45 @@
 # Postcard
 
-> *Trace every post back to its source.*
+> _Trace every post back to its source._
 
-Postcard is a digital forensics tool that takes a screenshot of a social media post and traces it to its origin — calculating how much the content has drifted from the original along the way.
+![Forensic Dashboard Mockup](./public/mockup.png)
 
-**Track:** PantherHacks 2026 — Cybersecurity  
-**Team:** Ethan + Yves  
-**Stack:** Next.js · Gemini (Google AI) · AI SDK v6 · Drizzle ORM + Turso/libSQL
+**Postcard** is a digital forensics tool that takes a social media post and traces it back to its definitive origin—calculating a **postcard score** of credibility by auditing how much the content has drifted from the primary source.
 
----
+## PantherHacks 2026 submission
+
+**Track:** [Cybersecurity](https://pantherhacks2026.devpost.com/)  
+**Challenge:** Rebuilding trust in a "post-truth" digital era.  
+**Pitch Script:** [View Video Script](./PITCH.md)
+
+## How it works
+
+**User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
+
+Postcard prioritizes the direct URL entrypoint to ensure absolute forensic precision, while maintaining support for screenshot-to-URL resolution as an additional quality-of-life feature.
 
 ## What it does
 
-1. **Upload** a screenshot of any social media post.
-2. **Vision parse** — Gemini extracts text, handles, timestamps, and engagement counts.
-3. **Navigator agent** — Gemini synthesizes high-precision search queries to find the primary source.
-4. **Multimodal auditor** — Gemini verifies the source URL, timestamp consistency, and visual fingerprints.
-5. **Postmark score** — The system calculates the final verdict and provides a forensic audit trail.
+**Postcard** is a digital forensics pipeline that takes a social media post URL, traces it back to its original source, and produces a **postcard score (0–100%)** measuring how much the content has drifted from the truth.
 
----
+> _Trace every post back to its source._
 
-## Technical blueprint
+## The problem
 
-For the full technical specification, including Zod schemas, database ERD, and component breakdown, see the [design document](file:///c:/Users/ethan/Documents/GitHub/postcard/DESIGN.md).
+Screenshots strip all context. By the time something goes viral, it's been cropped, captioned, and misattributed. A screenshot of a tweet looks nothing like the original tweet. Postcard reverses this entropy by finding the primary source and auditing it for forensic consistency.
 
----
+### The solution: the "Postcard" pipeline
 
-## Quick start
+We built a 4-stage forensic pipeline focused on deep audit log generation and corroboration for social media posts:
 
-```bash
-git clone https://github.com/EthanThatOneKid/postcard.git
-cd postcard
-npm install
-cp .env.example .env.local
-# Add GEMINI_API_KEY, TURSO_DATABASE_URL, and TURSO_AUTH_TOKEN to .env.local
-npx drizzle-kit push
-npm run dev
-```
+1. **URL Entrypoint:** Users submit the direct source URL for forensic verification.
+2. **Multimodal Ingest:** Jina Reader ingests live content to establish ground truth.
+3. **Forensic Audit:** Playwright and direct site checks verify origin and temporal alignment.
+4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to verify claims.
 
----
+## Documentation
 
-## Tech stack
-
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Frontend | Next.js | Responsive dashboard and fast API routes. |
-| AI / Vision | Gemini 2.5/3 | Native vision and Google Search grounding built-in. |
-| Orchestration | AI SDK v6 | Idiomatic structured output and tool integration. |
-| Storage | Drizzle ORM + Turso/libSQL | Type-safe persistence with low cold-start SQLite. |
-
----
-
-## Project structure
-
-All technical documentation is consolidated in [DESIGN.md](file:///c:/Users/ethan/Documents/GitHub/postcard/DESIGN.md).
-
-```bash
-postcard/
-├── DESIGN.md          # Master design + pipeline + schema
-├── README.md          # Technical overview
-├── src/               # Implementation (in progress)
-```
+- **[DESIGN.md](DESIGN.md):** Full technical specification and pipeline stages.
+- **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md):** High-level summary for the PantherHacks 2026 Devpost submission.
+- **[PITCH.md](PITCH.md):** Pitch script and video cues.
+- **[CONTRIBUTING.md](CONTRIBUTING.md):** Contributor notes, technical stack, and quick start guide.
