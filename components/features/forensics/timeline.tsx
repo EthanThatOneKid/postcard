@@ -317,9 +317,6 @@ interface AuditLogFields {
   ui_elements_match?: AuditVerificationStep;
 }
 
-interface AuditJsonData {
-  audit_log: AuditLogFields;
-}
 
 function parseAuditJson(entry: string): AuditLogFields | null {
   const match = entry.match(/\{[\s\S]*\}/);
