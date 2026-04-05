@@ -101,8 +101,8 @@ function Mailbox({
   );
 }
 
-interface JobStatus {
-  jobId: string;
+interface PostcardStatus {
+  postcardId: string;
   status: "processing" | "completed" | "failed";
   stage?: string;
   message?: string;
@@ -119,7 +119,7 @@ interface JobStatus {
 
 interface AnalysisJourneyProps {
   postUrl: string;
-  jobStatus: JobStatus | null;
+  postcardStatus: PostcardStatus | null;
   onComplete: (report: PostcardReport) => void;
   onReset: () => void;
   onSubmit: (url: string) => void;
@@ -127,7 +127,7 @@ interface AnalysisJourneyProps {
 
 export function AnalysisJourney({
   postUrl,
-  jobStatus,
+  postcardStatus,
   onComplete,
   onReset,
   onSubmit,
@@ -175,13 +175,13 @@ export function AnalysisJourney({
   }, [stageLabel, error]);
 
   useEffect(() => {
-    if (!jobStatus) return;
+    if (!postcardStatus) return;
 
-    const currentStatus = jobStatus.status;
+    const currentStatus = postcardStatus.status;
 
     if (currentStatus === "failed") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setError(jobStatus.error ?? "Analysis failed");
+      setError(postcardStatus.error ?? "Analysis failed");
       return;
     }
 
@@ -189,17 +189,17 @@ export function AnalysisJourney({
       currentStatus === "completed" &&
       lastStatusRef.current !== "completed"
     ) {
-      if (jobStatus.postcard && jobStatus.markdown) {
+      if (postcardStatus.postcard && postcardStatus.markdown) {
         const report: PostcardReport = {
-          postcard: jobStatus.postcard as PostcardReport["postcard"],
-          markdown: jobStatus.markdown,
+          postcard: postcardStatus.postcard as PostcardReport["postcard"],
+          markdown: postcardStatus.markdown,
           triangulation:
-            jobStatus.triangulation as PostcardReport["triangulation"],
-          audit: jobStatus.audit as PostcardReport["audit"],
+            postcardStatus.triangulation as PostcardReport["triangulation"],
+          audit: postcardStatus.audit as PostcardReport["audit"],
           corroboration:
-            jobStatus.corroboration as PostcardReport["corroboration"],
-          timestamp: jobStatus.timestamp ?? new Date().toISOString(),
-          analysisId: jobStatus.analysisId,
+            postcardStatus.corroboration as PostcardReport["corroboration"],
+          timestamp: postcardStatus.timestamp ?? new Date().toISOString(),
+          analysisId: postcardStatus.analysisId,
         };
 
         const hasContent = !!(
@@ -228,7 +228,7 @@ export function AnalysisJourney({
     }
 
     if (currentStatus === "processing") {
-      const { stage: serverStage, message, progress: pct } = jobStatus;
+      const { stage: serverStage, message, progress: pct } = postcardStatus;
 
       setStageLabel(
         serverStage === "starting"
@@ -245,7 +245,7 @@ export function AnalysisJourney({
     }
 
     lastStatusRef.current = currentStatus;
-  }, [jobStatus]);
+  }, [postcardStatus]);
 
   const planeX =
     stage === 0

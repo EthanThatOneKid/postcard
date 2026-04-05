@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   processPostcardFromUrl,
   PostcardRequestSchema,
-  getExistingProcessingJob,
-  createProcessingJob,
+  getExistingProcessingPostcard,
+  createPostcard,
   updateAnalysisProgress,
 } from "@/src/lib/postcard";
 import { db } from "@/src/db";
@@ -178,20 +178,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { url, image, userApiKey, forceRefresh } = parsed.data;
-
-  if (image) {
-    return corsResponse(
-      {
-        error:
-          "Image-based forensic analysis is currently disabled. Please provide a direct post URL for verification.",
-      },
-      400,
-    );
-  }
+  const { url, userApiKey, forceRefresh } = parsed.data;
 
   try {
-    const normalizedUrl = url!;
+    const normalizedUrl = url;
 
     if (!forceRefresh) {
       const latest = await getLatestAnalysisByUrl(normalizedUrl);
@@ -202,7 +192,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const report = buildReport(latest);
           return corsResponse(
             {
-              jobId: latest.analyses.id,
+              postcardId: latest.analyses.id,
               status: "processing",
               ...report,
             },
@@ -219,7 +209,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
           return corsResponse(
             {
-              jobId: latest.analyses.id,
+              postcardId: latest.analyses.id,
               status: "completed",
               ...report,
             },
@@ -229,12 +219,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const existingProcessing = await getExistingProcessingJob(normalizedUrl);
+    const existingProcessing =
+      await getExistingProcessingPostcard(normalizedUrl);
     if (existingProcessing) {
       const report = buildReport(existingProcessing);
       return corsResponse(
         {
-          jobId: existingProcessing.analyses.id,
+          postcardId: existingProcessing.analyses.id,
           status: "processing",
           ...report,
         },
@@ -252,7 +243,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const { postId, analysisId } = await createProcessingJob(
+    const { postId, analysisId } = await createPostcard(
       normalizedUrl,
       forceRefresh,
     );
@@ -279,7 +270,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return corsResponse(
       {
-        jobId: analysisId,
+        postcardId: analysisId,
         status: "processing",
         message: "Analysis started",
       },

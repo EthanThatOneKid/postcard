@@ -15,6 +15,51 @@ export type ProgressCallback = (
 
 export type AnalysisStatus = "pending" | "processing" | "completed" | "failed";
 
+export interface PipelineStage {
+  key: string;
+  message: string;
+  progress: number;
+}
+
+export const PIPELINE_STAGES: PipelineStage[] = [
+  { key: "starting", message: "Initializing analysis...", progress: 0 },
+  { key: "scraping", message: "Fetching post content...", progress: 0.1 },
+  { key: "scraped", message: "Fetched content", progress: 0.3 },
+  {
+    key: "corroborating",
+    message: "Searching for primary sources...",
+    progress: 0.4,
+  },
+  {
+    key: "auditing",
+    message: "Verifying origin and temporal alignment...",
+    progress: 0.7,
+  },
+  { key: "scoring", message: "Calculating Postcard score...", progress: 0.9 },
+  { key: "complete", message: "Postcard complete", progress: 1 },
+];
+
+async function runPipelineStages(
+  stages: PipelineStage[],
+  updateProgress: (
+    stage: string,
+    message: string,
+    progress: number,
+  ) => Promise<void>,
+  delayMs: number = 0,
+  onIntermediateProgress?: () => Promise<void>,
+): Promise<void> {
+  for (const stage of stages) {
+    await updateProgress(stage.key, stage.message, stage.progress);
+    if (delayMs > 0) {
+      await new Promise((r) => setTimeout(r, delayMs / stages.length));
+    }
+  }
+  if (onIntermediateProgress) {
+    await onIntermediateProgress();
+  }
+}
+
 export async function updateAnalysisProgress(
   analysisId: string,
   updates: {
@@ -34,7 +79,7 @@ export async function updateAnalysisProgress(
     .where(eq(analyses.id, analysisId));
 }
 
-export async function getExistingProcessingJob(url: string) {
+export async function getExistingProcessingPostcard(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
@@ -51,7 +96,7 @@ export async function getExistingProcessingJob(url: string) {
   return result.length > 0 ? result[0] : null;
 }
 
-export async function createProcessingJob(
+export async function createPostcard(
   url: string,
   forceRefresh?: boolean,
 ): Promise<{ postId: string; analysisId: string }> {
@@ -159,16 +204,11 @@ export const PostcardReportSchema = z.object({
 
 export type PostcardReport = z.infer<typeof PostcardReportSchema>;
 
-export const PostcardRequestSchema = z
-  .object({
-    url: z.string().url().optional(),
-    image: z.string().optional(), // base64 encoded image
-    userApiKey: z.string().optional(),
-    forceRefresh: z.boolean().optional(),
-  })
-  .refine((data) => data.url || data.image, {
-    message: "Either url or image must be provided",
-  });
+export const PostcardRequestSchema = z.object({
+  url: z.string().url(),
+  userApiKey: z.string().optional(),
+  forceRefresh: z.boolean().optional(),
+});
 
 export type PostcardRequest = z.infer<typeof PostcardRequestSchema>;
 
@@ -245,7 +285,30 @@ export async function processPostcardFromUrl(
   };
 
   if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
-    await updateProgress("complete", "Mock postcard complete", 1);
+    const delayMs = parseInt(
+      process.env.NEXT_PUBLIC_FAKE_PIPELINE_DELAY || "0",
+      10,
+    );
+    const fail = process.env.NEXT_PUBLIC_FAKE_PIPELINE_FAIL === "true";
+    const urlContainsFail = normalizedUrl.toLowerCase().includes("fail");
+
+    await runPipelineStages(
+      PIPELINE_STAGES,
+      updateProgress,
+      delayMs,
+      async () => {
+        await updateProgress("corroborating", "Verifying sources...", 0.5);
+      },
+    );
+
+    if (fail || urlContainsFail) {
+      await updateAnalysisProgress(analysisId!, {
+        status: "failed",
+        error: "Mock failure: External API unavailable",
+      });
+      throw new Error("Mock failure: External API unavailable");
+    }
+
     return { ...MOCK_POSTCARD_RESPONSE };
   }
 

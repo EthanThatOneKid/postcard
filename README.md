@@ -37,32 +37,35 @@ sequenceDiagram
     participant DB as Database (Turso)
 
     U->>API: POST /api/postcards { url: "https://x.com/..." }
-    API-->>U: HTTP 200 (SSE Stream Started)
+    API-->>U: HTTP 202 { postcardId, status: "processing" }
 
-    API->>P: processPostcardFromUrl(url)
-    P->>DB: Check cached analysis
+    API->>P: processPostcardFromUrl(url, postcardId)
+    P->>DB: Update progress (stage, message, progress)
+
     alt Cache Hit
         DB-->>P: Return cached report
     else Cache Miss
         P->>I: unifiedPostClient.fetch(url)
         I-->>P: High-fidelity Markdown
-        P->>U: SSE Event: Progress ("Scraping complete")
+        P->>DB: Update progress (stage: "scraping", progress: 0.1)
 
         P->>C: corroboratePostcard(content)
         C-->>P: Independent Evidence & Verdict
-        P->>U: SSE Event: Progress ("Corroboration complete")
+        P->>DB: Update progress (stage: "corroborating", progress: 0.4)
 
         P->>V: auditPostcard(url, postcard)
         V-->>P: Origin & Temporal Scores
-        P->>U: SSE Event: Progress ("Audit complete")
+        P->>DB: Update progress (stage: "auditing", progress: 0.7)
 
         P->>P: Calculate Postcard Score
-        P->>DB: Persist new analysis
+        P->>DB: Persist analysis (status: "completed", progress: 1)
     end
 
     P-->>API: PostcardResponse + ForensicReport
-    API->>U: SSE Event: Complete { report, forensicReport }
-    API-->>U: Close Stream
+    API-->>U: (via polling)
+
+    Note over U: Polls GET /api/postcards?url=...<br/>every 3 seconds for status
+    Note over U: When status="completed", displays report
 ```
 
 ## Flow
@@ -124,6 +127,7 @@ the source without the fragility of manual extraction.
   the PantherHacks 2026 Devpost submission.
 - [docs/PITCH.md](docs/PITCH.md): Pitch script and video cues.
 - [Mintlify Documentation](https://www.mintlify.com/postcardhq/postcard): Hosted, interactive documentation for Postcard.
+- [API Reference](https://postcard.fartlabs.org/api/reference): Interactive API reference (Scalar).
 - [docs/API.md](docs/API.md): Full API reference with examples.
 - [public/openapi.json](public/openapi.json): OpenAPI v3.1 Specification for SDK generation.
 

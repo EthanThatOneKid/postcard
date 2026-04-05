@@ -9,8 +9,8 @@ import { normalizePostUrl } from "@/src/lib/url";
 
 type PageStage = "upload" | "analyzing" | "results";
 
-interface JobStatus {
-  jobId: string;
+interface PostcardStatus {
+  postcardId: string;
   status: "processing" | "completed" | "failed";
   stage?: string;
   message?: string;
@@ -46,38 +46,27 @@ export default function PostcardsClient({
   const postUrl = processingUrl || initialUrl;
   const forceRefresh = isForcedRefresh;
 
-  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+  const [postcardStatus, setPostcardStatus] = useState<PostcardStatus | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const startPolling = useCallback((url: string, jobId: string) => {
-    const poll = async () => {
+  const startPolling = useCallback((url: string, _postcardId?: string) => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+
+    pollingRef.current = setInterval(async () => {
       try {
         const response = await fetch(
           `/api/postcards?url=${encodeURIComponent(url)}`,
         );
         if (response.ok) {
           const data = await response.json();
-          setJobStatus(data);
+          setPostcardStatus(data);
 
-          if (data.status === "completed") {
-            if (pollingRef.current) {
-              clearInterval(pollingRef.current);
-              pollingRef.current = null;
-            }
-            if (data.postcard && data.markdown) {
-              const completeReport: PostcardReport = {
-                postcard: data.postcard,
-                markdown: data.markdown,
-                triangulation: data.triangulation,
-                audit: data.audit,
-                corroboration: data.corroboration,
-                timestamp: data.timestamp,
-                analysisId: data.analysisId,
-              };
-              setReport(completeReport);
-            }
-          } else if (data.status === "failed") {
+          if (data.status === "completed" || data.status === "failed") {
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
               pollingRef.current = null;
@@ -87,56 +76,28 @@ export default function PostcardsClient({
       } catch (err) {
         console.error("Polling error:", err);
       }
-    };
-
-    poll();
-    pollingRef.current = setInterval(poll, 3000);
+    }, 3000);
   }, []);
 
-  const submitUrl = useCallback(
-    async (url: string) => {
-      setIsSubmitting(true);
-      try {
-        const response = await fetch("/api/postcards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, forceRefresh: true }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.jobId) {
-            startPolling(url, data.jobId);
-          }
-        }
-      } catch (err) {
-        console.error("Submit error:", err);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [forceRefresh, startPolling],
-  );
-
   useEffect(() => {
-    if (processingUrl && !report && !jobStatus) {
-      startPolling(processingUrl, "");
+    if (processingUrl && !report && !postcardStatus) {
+      startPolling(processingUrl);
     }
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
       }
     };
-  }, [processingUrl, report, jobStatus, startPolling]);
+  }, [processingUrl, report, postcardStatus, startPolling]);
 
   const pageStage: PageStage = useMemo(() => {
     if (report) return "results";
-    if (postUrl && (jobStatus?.status === "processing" || isSubmitting))
+    if (postUrl && (postcardStatus?.status === "processing" || isSubmitting))
       return "analyzing";
-    if (postUrl && jobStatus?.status === "failed") return "results";
+    if (postUrl && postcardStatus?.status === "failed") return "results";
     if (postUrl) return "analyzing";
     return "upload";
-  }, [report, postUrl, jobStatus, isSubmitting]);
+  }, [report, postUrl, postcardStatus, isSubmitting]);
 
   const handleUrlSubmitted = useCallback(
     (url: string) => {
@@ -154,7 +115,7 @@ export default function PostcardsClient({
 
   const handleReset = useCallback(() => {
     setReport(null);
-    setJobStatus(null);
+    setPostcardStatus(null);
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
@@ -166,15 +127,18 @@ export default function PostcardsClient({
     return (
       <AnalysisJourney
         postUrl={postUrl}
-        jobStatus={jobStatus}
+        postcardStatus={postcardStatus}
         onComplete={handleReportReady}
         onReset={handleReset}
-        onSubmit={submitUrl}
+        onSubmit={handleUrlSubmitted}
       />
     );
   }
 
-  if (pageStage === "results" && (report || jobStatus?.status === "failed")) {
+  if (
+    pageStage === "results" &&
+    (report || postcardStatus?.status === "failed")
+  ) {
     return (
       <ForensicReport
         report={
@@ -192,7 +156,7 @@ export default function PostcardsClient({
               primarySources: [],
               queriesExecuted: [],
               verdict: "insufficient_data",
-              summary: jobStatus?.error || "Analysis failed",
+              summary: postcardStatus?.error || "Analysis failed",
               confidenceScore: 0,
               corroborationLog: [],
             },

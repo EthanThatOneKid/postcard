@@ -38,19 +38,28 @@
         ],
         "responses": {
           "200": {
-            "description": "Analysis found",
+            "description": "Analysis found or processing",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "url": { "type": "string", "format": "uri" },
+                    "postcardId": { "type": "string", "format": "uuid" },
+                    "status": {
+                      "type": "string",
+                      "enum": ["processing", "completed", "failed"]
+                    },
                     "platform": { "type": "string" },
                     "postcardScore": {
                       "type": "number",
                       "description": "Postcard score (0-100)"
                     },
                     "markdown": { "type": "string" },
+                    "progress": { "type": "number" },
+                    "stage": { "type": "string" },
+                    "message": { "type": "string" },
+                    "error": { "type": "string" },
                     "postcard": {
                       "type": "object",
                       "properties": {
@@ -98,7 +107,7 @@
                       "$ref": "#/components/schemas/Corroboration"
                     },
                     "timestamp": { "type": "string", "format": "date-time" },
-                    "analysisId": { "type": "string", "format": "uuid" }
+                    "postcardId": { "type": "string", "format": "uuid" }
                   }
                 }
               }
@@ -117,7 +126,7 @@
       },
       "post": {
         "summary": "Initiate new trace",
-        "description": "Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) stream with progress updates.",
+        "description": "Submits a new URL for forensic verification. Returns a postcard ID for polling status.",
         "requestBody": {
           "required": true,
           "content": {
@@ -129,13 +138,32 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "SSE stream started",
+          "202": {
+            "description": "Postcard analysis started, use postcardId to poll for status",
             "content": {
-              "text/event-stream": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "description": "Stream of events: progress, complete, error"
+                  "type": "object",
+                  "properties": {
+                    "postcardId": { "type": "string", "format": "uuid" },
+                    "status": { "type": "string", "enum": ["processing"] },
+                    "message": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "postcardId": "550e8400-e29b-41d4-a716-446655440000",
+                  "status": "processing",
+                  "message": "Analysis started"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Existing completed analysis returned (cache hit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostcardReport"
                 }
               }
             }
@@ -156,10 +184,6 @@
             "type": "string",
             "format": "uri",
             "description": "Direct URL of the social media post"
-          },
-          "image": {
-            "type": "string",
-            "description": "Base64 encoded screenshot (currently disabled in backend)"
           },
           "userApiKey": {
             "type": "string",

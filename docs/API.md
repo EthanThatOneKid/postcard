@@ -24,22 +24,36 @@ We provide an interactive API reference powered by [Scalar](https://scalar.com):
 
 ## Endpoints
 
-### Get /api/postcards
+### GET /api/postcards
 
-Retrieves the forensic verification result for a given URL.
+Retrieves the forensic verification result for a given URL. Use for polling postcard status.
 
 **Query parameters:**
 
-**Headers:**
+| Parameter | Required | Description                         |
+| :-------- | :------- | :---------------------------------- |
+| `url`     | Yes      | The social media post URL to verify |
 
-**Response codes:**
+**Response:**
 
-**Example request:**
+Returns JSON with postcard status and optionally the full report.
 
-**Example response:**
+**Processing response (200):**
 
 ```json
 {
+  "status": "processing",
+  "stage": "corroborating",
+  "message": "Searching for primary sources...",
+  "progress": 0.4
+}
+```
+
+**Completed response (200):**
+
+```json
+{
+  "status": "completed",
   "postcard": {
     "platform": "X",
     "mainText": "Post content here...",
@@ -55,21 +69,10 @@ Retrieves the forensic verification result for a given URL.
     "originScore": 0.85,
     "temporalScore": 0.9,
     "totalScore": 0.875,
-    "auditLog": [
-      "Analysis initiated via direct URL submission",
-      "Origin reputation based on platform ingestion client metrics"
-    ]
+    "auditLog": []
   },
   "corroboration": {
-    "primarySources": [
-      {
-        "url": "https://news.example.com/article",
-        "title": "Related News Article",
-        "source": "News",
-        "snippet": "Relevant content...",
-        "relevance": "supporting"
-      }
-    ],
+    "primarySources": [],
     "queriesExecuted": [],
     "verdict": "verified",
     "summary": "Content has been corroborated by trusted sources.",
@@ -81,9 +84,27 @@ Retrieves the forensic verification result for a given URL.
 }
 ```
 
-### Post /api/postcards
+**Failed response (200):**
 
-Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) stream with progress updates.
+```json
+{
+  "status": "failed",
+  "error": "Unable to access this content. Login or signup wall detected."
+}
+```
+
+**Not found (404):**
+
+```json
+{
+  "status": "not_found",
+  "error": "Analysis not found. POST to /api/postcards to initiate a new trace."
+}
+```
+
+### POST /api/postcards
+
+Submits a new URL for forensic verification. Creates a postcard and returns immediately with a postcardId. Poll GET endpoint for status updates.
 
 **Headers:**
 
@@ -93,6 +114,14 @@ Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) 
 
 **Body:**
 
+| Field          | Required | Type    | Description                        |
+| :------------- | :------- | :------ | :--------------------------------- |
+| `url`          | Yes      | string  | The social media post URL          |
+| `userApiKey`   | No       | string  | Optional API key for rate limiting |
+| `forceRefresh` | No       | boolean | Force re-analysis even if cached   |
+
+**Request:**
+
 ```json
 {
   "url": "https://x.com/user/status/123",
@@ -101,18 +130,73 @@ Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) 
 }
 ```
 
-**Response:** SSE stream with events:
+**Response (202 Accepted):**
 
-- `progress` - Stage updates during analysis
-- `complete` - Final forensic report
-- `error` - Error messages
+```json
+{
+  "postcardId": "abc-123",
+  "status": "processing",
+  "message": "Analysis started"
+}
+```
 
-**Example:**
+**Response (200):**
+
+If a processing job already exists for this URL, returns that job instead of creating a new one:
+
+```json
+{
+  "postcardId": "abc-123",
+  "status": "processing",
+  "stage": "starting",
+  "message": "Initializing...",
+  "progress": 0
+}
+```
+
+If a completed analysis exists and `forceRefresh` is not set, returns cached results:
+
+```json
+{
+  "postcardId": "abc-123",
+  "status": "completed",
+  "postcard": { ... },
+  "markdown": "...",
+  ...
+}
+```
+
+### Polling for Status
+
+1. Call `POST /api/postcards` with the URL to start analysis
+2. Use the returned `postcardId` to poll `GET /api/postcards?url=...` every 3-5 seconds
+3. When `status` changes to `completed`, the full report is in the response
+4. If `status` is `failed`, check the `error` field for details
+
+**Example polling loop:**
 
 ```bash
-curl -X POST "https://postcard.fartlabs.org/api/postcards" \
+# Start analysis
+JOB=$(curl -s -X POST "https://postcard.fartlabs.org/api/postcards" \
   -H "Content-Type: application/json" \
-  -d '{ "url": "https://x.com/user/status/123" }'
+  -d '{ "url": "https://x.com/user/status/123" }' | jq -r '.postcardId')
+
+# Poll for completion
+while true; do
+  RESPONSE=$(curl -s "https://postcard.fartlabs.org/api/postcards?url=https://x.com/user/status/123")
+  STATUS=$(echo "$RESPONSE" | jq -r '.status')
+
+  if [ "$STATUS" = "completed" ]; then
+    echo "$RESPONSE" | jq '.postcard'
+    break
+  elif [ "$STATUS" = "failed" ]; then
+    echo "Error: $(echo '$RESPONSE' | jq -r '.error')"
+    break
+  fi
+
+  echo "Progress: $(echo '$RESPONSE' | jq -r '.progress // 0')"
+  sleep 3
+done
 ```
 
 ## CORS
