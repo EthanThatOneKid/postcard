@@ -100,7 +100,7 @@ export async function GET(
               width: "120px",
               height: "140px",
               backgroundColor: "#f4c07a",
-              border: "4px double #d4882c",
+              border: "4px solid #d4882c",
               transform: "rotate(5deg)",
               alignItems: "center",
               justifyContent: "center",
@@ -137,7 +137,7 @@ export async function GET(
             style={{
               display: "flex",
               padding: "10px 40px",
-              border: `8px double ${verdictColor}`,
+              border: `8px solid ${verdictColor}`,
               color: verdictColor,
               fontSize: "64px",
               fontWeight: "bold",

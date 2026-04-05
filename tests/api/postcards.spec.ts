@@ -54,5 +54,10 @@ test.describe("Postcards API", () => {
     expect(finalBody.forensicReport).toBeDefined();
     expect(finalBody.corroboration).toBeDefined();
     expect(typeof finalBody.postcardScore).toBe("number");
+
+    // 4. Verify OG Image rendering
+    const ogResponse = await request.get(`/api/postcards/${id}/og`);
+    expect(ogResponse.status()).toBe(200);
+    expect(ogResponse.headers()["content-type"]).toBe("image/png");
   });
 });
