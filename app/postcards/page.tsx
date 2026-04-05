@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { db } from "@/src/db";
-import { postcards, posts } from "@/src/db/schema";
+import { postcards, posts, PostcardRowSchema } from "@/src/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { normalizePostUrl } from "@/src/lib/url";
 import PostcardsClient from "./postcards-client";
@@ -20,7 +20,11 @@ async function getPostcardsRowByUrl(url: string) {
     .limit(1);
 
   if (result.length === 0) return null;
-  return result[0];
+  const { postcards: row, posts: post } = result[0];
+  return {
+    row: PostcardRowSchema.parse(row),
+    post: post,
+  };
 }
 
 export async function generateMetadata({ searchParams }: Props) {
@@ -46,7 +50,7 @@ export async function generateMetadata({ searchParams }: Props) {
     };
   }
 
-  const { postcards: row } = data;
+  const { row } = data;
   const verdictMap = {
     verified: "✅ Verified",
     disputed: "❌ Disputed",
@@ -55,7 +59,7 @@ export async function generateMetadata({ searchParams }: Props) {
   };
 
   const verdictLabel =
-    verdictMap[row.verdict as keyof typeof verdictMap] || row.verdict;
+    verdictMap[row.verdict as keyof typeof verdictMap] ?? row.verdict;
 
   return {
     title: `Postcard: ${verdictLabel} (${row.postcardScore}/100)`,
@@ -75,51 +79,46 @@ export default async function PostcardsPage({ searchParams }: Props) {
   if (normalizedUrl && !forceRefresh) {
     const data = await getPostcardsRowByUrl(normalizedUrl);
     if (data) {
-      const { postcards: row, posts: post } = data;
-      const queriesExecuted = JSON.parse(
-        (row.queriesExecuted as string) || "[]",
-      ) as Array<{ query: string; sourcesFound: number }>;
+      const queriesExecuted = JSON.parse(data.row.queriesExecuted ?? "[]");
       initialReport = {
         postcard: {
           platform:
-            (row.platform as
+            (data.row.platform as
               | "X"
               | "YouTube"
               | "Reddit"
               | "Instagram"
               | "Other") || "Other",
-          mainText: post.mainText || "",
-          username: post.username || undefined,
-          timestampText: post.timestampText || undefined,
+          mainText: data.post.mainText || "",
+          username: data.post.username || undefined,
+          timestampText: data.post.timestampText || undefined,
         },
-        markdown: post.markdown || "",
+        markdown: data.post.markdown || "",
         triangulation: {
-          targetUrl: row.url,
-          queries: queriesExecuted.map((q) => q.query),
+          targetUrl: data.row.url,
+          queries: queriesExecuted.map((q: { query: string }) => q.query),
         },
         audit: {
-          originScore: row.originScore || 0,
-          temporalScore: row.temporalScore || 0,
-          totalScore: row.postcardScore / 100,
-          auditLog: JSON.parse((row.auditLog as string) || "[]"),
+          originScore: data.row.originScore ?? 0,
+          temporalScore: data.row.temporalScore ?? 0,
+          totalScore: data.row.postcardScore / 100,
+          auditLog: JSON.parse(data.row.auditLog ?? "[]"),
         },
         corroboration: {
-          primarySources: JSON.parse((row.primarySources as string) || "[]"),
+          primarySources: JSON.parse(data.row.primarySources ?? "[]"),
           queriesExecuted,
           verdict:
-            (row.verdict as
+            (data.row.verdict as
               | "verified"
               | "disputed"
               | "inconclusive"
-              | "insufficient_data") || "insufficient_data",
-          summary: row.summary || "",
-          confidenceScore: row.confidenceScore || 0,
-          corroborationLog: JSON.parse(
-            (row.corroborationLog as string) || "[]",
-          ),
+              | "insufficient_data") ?? "insufficient_data",
+          summary: data.row.summary ?? "",
+          confidenceScore: data.row.confidenceScore ?? 0,
+          corroborationLog: JSON.parse(data.row.corroborationLog ?? "[]"),
         },
-        timestamp: row.createdAt.toISOString(),
-        id: row.id,
+        timestamp: data.row.createdAt.toISOString(),
+        id: data.row.id,
       };
     }
   } else if (normalizedUrl && forceRefresh) {
