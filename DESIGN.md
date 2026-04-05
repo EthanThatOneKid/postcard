@@ -26,8 +26,8 @@ Postcard operates as a forensic pipeline designed to audit social media content.
 ### Forensic pipeline (URL entrypoint)
 
 1. **URL Entrypoint:** Users submit the direct source URL for forensic verification.
-2. **Multimodal Ingest:** Jina Reader fetches the live content to establish ground truth.
-3. **Forensic Audit:** Playwright and direct site checks verify origin and temporal alignment.
+2. **Strategy-Based Ingest:** A platform-aware `UnifiedPostStrategy` delegates to specialized **UnifiedPostClients** (Reddit, YouTube oEmbed) or Jina Reader for high-fidelity data retrieval.
+3. **Forensic Audit:** Validation of origin, temporal alignment, and engagement consistency using live metadata.
 4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to verify claims.
 
 ### Pipeline stages
@@ -44,7 +44,13 @@ Gemini 2.5/3+ analyzes the processed image to extract structured metadata and **
 
 The navigator agent triangulates the source URL using OCR metadata and platform clues. It generates targeted search queries and prioritizes primary sources over aggregators.
 
-**Content Ingestion (Jina Reader):** Once a URL is provided (or resolved), the system uses the **Jina Reader API** (`https://r.jina.ai/<url>`) to ingest the **live metadata** (exact like counts, character-by-character text, absolute timestamps). This serves as the "ground truth" for the forensic audit.
+**Content Ingestion (UnifiedPost Strategy):** To ensure maximum reliability and bypass common "login required" blocks, Postcard uses a **Strategy Pattern** for data ingestion. The system inspects the URL and delegates to the most robust **UnifiedPostClient**:
+
+- **Reddit Strategy:** Uses the native `.json` endpoint for character-perfect markdown and engagement counts without scraping.
+- **YouTube Strategy:** Uses oEmbed for video metadata and specialized shadow scrapers for community posts.
+- **Jina Fallback:** Acts as a high-fidelity markdown scraper for general websites and a secondary pass if a primary client fails.
+
+This stage produces a **UnifiedPost** object, standardizing the "ground truth" for the forensic audit. When ingestion is blocked by a platform, the UI provides transparency by displaying the raw markdown retrieved during the attempt.
 
 #### Stage 4: forensic auditor
 

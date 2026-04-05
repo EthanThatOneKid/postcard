@@ -7,7 +7,7 @@ import { extractPostcard } from "./vision/ocr";
 import { navigateToSource } from "./agents/navigator";
 import { auditPostcard } from "./agents/verifier";
 import { corroboratePostcard } from "./agents/corroborator";
-import { fetcher as unifiedFetcher } from "./ingest";
+import { unifiedPostClient } from "./ingest";
 
 export type ProgressCallback = (
   stage: string,
@@ -217,8 +217,8 @@ export async function processPostcardFromUrl(
   }
 
   try {
-    progress("scraping", "Fetching content via FetcherStrategy...", 0.1);
-    const post = await unifiedFetcher.fetch(url);
+    progress("scraping", "Fetching content via UnifiedPostClient...", 0.1);
+    const post = await unifiedPostClient.fetch(url);
     const markdown = post.markdown;
 
     const BLOCKING_PATTERNS = [

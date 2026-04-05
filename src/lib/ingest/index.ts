@@ -1,32 +1,32 @@
-import { RedditFetcher } from "./reddit";
-import { YoutubeFetcher } from "./youtube";
-import { JinaFetcher } from "./jina";
-import type { PostFetcher, UnifiedPost } from "./types";
+import { RedditPostClient } from "./reddit";
+import { YoutubePostClient } from "./youtube";
+import { JinaPostClient } from "./jina";
+import type { UnifiedPostClient, UnifiedPost } from "./types";
 
-export class FetcherStrategy {
-  private fetchers: PostFetcher[] = [
-    new RedditFetcher(),
-    new YoutubeFetcher(),
-    new JinaFetcher(), // Fallback
+export class UnifiedPostStrategy {
+  private clients: UnifiedPostClient[] = [
+    new RedditPostClient(),
+    new YoutubePostClient(),
+    new JinaPostClient(), // Fallback
   ];
 
   async fetch(url: string): Promise<UnifiedPost> {
-    const fetcher = this.fetchers.find((f) => f.canHandle(url));
-    if (!fetcher) {
-      throw new Error(`No fetcher found for URL: ${url}`);
+    const client = this.clients.find((c) => c.canHandle(url));
+    if (!client) {
+      throw new Error(`No client found for URL: ${url}`);
     }
 
     try {
-      return await fetcher.fetch(url);
+      return await client.fetch(url);
     } catch (error) {
       console.warn(
-        `Primary fetcher (${fetcher.constructor.name}) failed. Falling back to Jina...`,
+        `Primary client (${client.constructor.name}) failed. Falling back to Jina...`,
         error,
       );
-      if (fetcher instanceof JinaFetcher) throw error;
-      return new JinaFetcher().fetch(url);
+      if (client instanceof JinaPostClient) throw error;
+      return new JinaPostClient().fetch(url);
     }
   }
 }
 
-export const fetcher = new FetcherStrategy();
+export const unifiedPostClient = new UnifiedPostStrategy();

@@ -1,6 +1,6 @@
-import type { PostFetcher, UnifiedPost } from "./types";
+import type { UnifiedPostClient, UnifiedPost } from "./types";
 
-export class JinaFetcher implements PostFetcher {
+export class JinaPostClient implements UnifiedPostClient {
   canHandle(_url: string): boolean {
     return true; // Final fallback
   }

@@ -9,7 +9,7 @@ export interface UnifiedPost {
   metadata?: Record<string, unknown>;
 }
 
-export interface PostFetcher {
+export interface UnifiedPostClient {
   canHandle(url: string): boolean;
   fetch(url: string): Promise<UnifiedPost>;
 }

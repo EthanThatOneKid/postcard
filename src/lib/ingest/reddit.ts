@@ -1,6 +1,6 @@
-import type { PostFetcher, UnifiedPost } from "./types";
+import type { UnifiedPostClient, UnifiedPost } from "./types";
 
-export class RedditFetcher implements PostFetcher {
+export class RedditPostClient implements UnifiedPostClient {
   canHandle(url: string): boolean {
     const hostname = new URL(url).hostname.toLowerCase();
     return hostname.includes("reddit.com");
