@@ -62,6 +62,18 @@ export function Navbar() {
           >
             Why It Matters
           </Link>
+          <a
+            href="https://github.com/postcardhq/postcard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center min-h-[44px] px-3 text-[11px] tracking-[0.22em] uppercase"
+            style={{
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-ink-muted)",
+            }}
+          >
+            GitHub
+          </a>
         </nav>
       </div>
     </header>

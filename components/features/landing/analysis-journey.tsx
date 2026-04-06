@@ -303,6 +303,7 @@ export function AnalysisJourney({
       lastStatusRef.current !== "completed"
     ) {
       // API responses wrap the data in `forensicReport`, while client mocks flatten it.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dataSrc = (postcardStatus as any).forensicReport ?? postcardStatus;
 
       if (dataSrc.postcard && typeof dataSrc.markdown === "string") {
