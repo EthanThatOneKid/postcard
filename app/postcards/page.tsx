@@ -140,7 +140,9 @@ export default async function PostcardsPage({ searchParams }: Props) {
       } else if (shouldRefresh) {
         // User wants to re-run — need an API key (unless in fake mode)
         const cookieStore = await cookies();
-        const apiKey = cookieStore.get(API_KEY_COOKIE)?.value || (isFakeMode ? "fake-key" : null);
+        const apiKey =
+          cookieStore.get(API_KEY_COOKIE)?.value ||
+          (isFakeMode ? "fake-key" : null);
 
         if (apiKey) {
           const { id } = await createPostcard(normalizedUrl);
@@ -161,7 +163,9 @@ export default async function PostcardsPage({ searchParams }: Props) {
     } else {
       // No cached data — need an API key to start fresh analysis (unless in fake mode)
       const cookieStore = await cookies();
-      const apiKey = cookieStore.get(API_KEY_COOKIE)?.value || (isFakeMode ? "fake-key" : null);
+      const apiKey =
+        cookieStore.get(API_KEY_COOKIE)?.value ||
+        (isFakeMode ? "fake-key" : null);
 
       if (apiKey) {
         const { id } = await createPostcard(normalizedUrl);
