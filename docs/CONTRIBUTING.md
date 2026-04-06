@@ -2,100 +2,121 @@
 
 This document provides technical context and setup instructions for developers and contributors to the Postcard project.
 
-## Setup
+## Environment setup
 
 To set up the development environment, perform the following steps:
 
-1.  **Clone the repository:**
+- **Clone the repository.**
 
-    ```bash
-    git clone https://github.com/postcardhq/postcard.git
-    cd postcard
-    ```
+  ```bash
+  git clone https://github.com/postcardhq/postcard.git
+  cd postcard
+  ```
 
-2.  Install dependencies:
+- **Install dependencies.**
 
-    ```bash
-    npm install
-    ```
+  ```bash
+  npm install
+  ```
 
-3.  **Install Playwright browsers:**
-    Postcard requires specifically configured browser binaries for forensic scraping:
+- **Install Playwright browsers.**
+  Postcard requires specifically configured browser binaries for forensic scraping:
 
-    ```bash
-    npx playwright install
-    ```
+  ```bash
+  npx playwright install
+  ```
 
-4.  **Configure environment variables:**
-    Copy the template to create your local environment file:
+- **Configure environment variables.**
+  Copy the template to create your local environment file:
 
-    ```bash
-    cp .env.example .env
-    ```
+  ```bash
+  cp .env.example .env
+  ```
 
-    Edit `.env` to include your `GOOGLE_GENERATIVE_AI_API_KEY` if you plan to use the live pipeline.
+  Edit `.env` to include your `GOOGLE_GENERATIVE_AI_API_KEY` if you plan to use the live pipeline.
 
-5.  **Initialize the database:**
-    Sync the schema to your local SQLite file:
+- **Initialize the database.**
+  Sync the schema to your local SQLite file:
 
-    ```bash
-    npm run db:push
-    ```
+  ```bash
+  npm run db:push
+  ```
 
-    You can inspect your local forensic audit logs visually at any time using:
+  You can inspect your local forensic audit logs visually at any time using:
 
-    ```bash
-    npm run db:studio
-    ```
+  ```bash
+  npm run db:studio
+  ```
 
-6.  **Verify the environment:\*\***
+- **Verify the environment.**
 
-    ```bash
-    npm run check  # Run linting and type-checks
-    ```
+  ```bash
+  npm run check  # Run linting and type-checks
+  ```
 
-7.  **Start the development server:**
-    ```bash
-    npm run dev
-    ```
+- **Start the development server.**
+  ```bash
+  npm run dev
+  ```
 
-## Testing
+## System testing
 
 Postcard includes a comprehensive test suite for verifying ingestion strategies and forensic pipelines.
 
-- **Run all tests:** `npm run test`
-- **Run in UI mode:** `npx playwright test --ui`
+- **Run all automated tests.** `npm run test`
+- **Run in UI mode.** `npx playwright test --ui`
 
 The test suite automatically utilizes the `fake` project configuration to ensure consistent results without consuming AI API credits during local verification.
 
-## Documentation
+### Manual verification checklist
 
-- **Live Demo:** [postcard.fartlabs.org](https://postcard.fartlabs.org)
-- **Hosted Docs:** [Mintlify](https://www.mintlify.com/postcardhq/postcard)
-- **OpenAPI:** [openapi.json](../public/openapi.json)
+To verify the forensic pipeline and dynamic UI components manually, follow these scenarios:
+
+1.  **Forensic pipeline hardening.**
+    - Navigate to `/postcards`.
+    - Submit a URL containing the word **"fail"** (e.g., `https://x.com/user/status/fail-test`).
+    - **Expected.** The airmail animation starts immediately, followed by a "failed" state with an error message and stopped polling.
+
+2.  **Dynamic social cards (OG images).**
+    - Complete any analysis and copy the **Postcard ID** from the URL.
+    - Visit `/api/postcards/[ID]/og`.
+    - **Expected.** You see a rendered PNG image with a vintage "Forensic Report" aesthetic, dynamic score stamp color, and verdit text.
+
+3.  **Public API lifecycle (202 Accepted).**
+    - Trigger a new trace using `POST /api/postcards` with JSON `{"url": "..."}`.
+    - Immediately poll using `GET /api/postcards?url=...`.
+    - **Expected.** Returns **HTTP 202 Accepted** while processing, followed by **HTTP 200 OK** with the full report object once complete.
+
+4.  **Agent throttling.**
+    - In `.env`, set `POSTCARD_MAX_TOOL_CALLS=2`.
+    - Run a live (non-fake) trace.
+    - **Expected.** The agent stops searching after exactly 2 tool executions. Verify this in the **Corroboration Log** in the report UI.
+
+## Internal documentation
+
+- **Live demo.** [postcard.fartlabs.org](https://postcard.fartlabs.org)
+- **Hosted docs.** [Mintlify](https://www.mintlify.com/postcardhq/postcard)
+- **OpenAPI.** [openapi.json](../public/openapi.json)
 
 When contributing new features, ensure that the corresponding documentation is updated in the `docs/` folder and that any API changes are reflected in the OpenAPI specification.
 
-## Configuration
+## Project configuration
 
 Postcard supports two primary development modes, toggled via the `NEXT_PUBLIC_FAKE_PIPELINE` environment variable in your `.env` file.
 
-- Fake Mode (`true`): Uses mock data for all forensic stages. No Gemini API key or external scraping is required. This is the default for rapid UI/UX development.
-- Live Mode (`false`): Executes the full forensic pipeline (OCR, Navigator, Auditor, Corroborator). Requires a valid `GOOGLE_GENERATIVE_AI_API_KEY` from [Google AI Studio](https://aistudio.google.com/app/apikey).
+- **Fake mode (`true`).** Uses mock data for all forensic stages. No Gemini API key or external scraping is required. This is the default for rapid UI/UX development.
+- **Live mode (`false`).** Executes the full forensic pipeline (OCR, Navigator, Auditor, Corroborator). Requires a valid Gemini API key stored in a browser cookie (`postcard_api_key`).
 
 ### Specialized ingestion keys (optional)
 
 To improve ingestion reliability for platforms that often restrict generic scrapers, you can provide the following optional keys in your `.env`:
 
-- Instagram: Add `INSTAGRAM_ACCESS_TOKEN` from your [Meta for Developers](https://developers.facebook.com/) app to enable high-fidelity oEmbed data.
-- Reddit: Add `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, and `REDDIT_PASSWORD` for authenticated API access.
-- **X (Twitter) & TikTok:** These currently utilize no-auth oEmbed endpoints, but placeholders are available in `.env.example` for future-proofing.
+- **Instagram.** Add `INSTAGRAM_ACCESS_TOKEN` from your [Meta for Developers](https://developers.facebook.com/) app.
+- **Reddit.** Add `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, and `REDDIT_PASSWORD` for authenticated API access.
 
 If these keys are omitted, Postcard gracefully falls back to Jina Reader for best-effort ingestion.
 
 ### Ingestion strategy logic
-
-When Postcard is in Live Mode, it uses a multi-tier strategy to retrieve post data. The following diagram illustrates how the system chooses between specialized clients and the Jina fallback:
 
 ```mermaid
 graph TD
@@ -113,42 +134,24 @@ graph TD
     G --> F
 ```
 
-#### Platform configuration reference
-
-| Platform    | Key Required? | Behavior Without Key         | Primary Strategy      |
-| :---------- | :------------ | :--------------------------- | :-------------------- |
-| Reddit      | No\*          | Uses public `.json` endpoint | `RedditPostClient`    |
-| YouTube     | No            | Uses public oEmbed API       | `YoutubePostClient`   |
-| X (Twitter) | No            | Uses public oEmbed API       | `XPostClient`         |
-| TikTok      | No            | Uses public oEmbed API       | `TikTokPostClient`    |
-| Instagram   | Yes           | Falls back to Jina           | `InstagramPostClient` |
-| Others      | No            | Hits Jina Reader directly    | `JinaPostClient`      |
-
-_\* Reddit keys are optional but recommended for higher rate limits._
-
-## Database
+## Database management
 
 Postcard uses Drizzle ORM with libSQL (SQLite) and [Turso](https://turso.tech). By default, it uses a local SQLite file (`local.db`) for rapid development.
 
-### Turso Cloud Setup (Remote Database)
+### Turso cloud setup (remote database)
 
 To connect to a remote Turso database for production or cloud testing:
 
-1. Create a free account at [turso.tech](https://turso.tech) and install the Turso CLI.
-2. Create a new database: `turso db create postcard-db`
-3. Get the database URL: `turso db show postcard-db --url`
-4. Generate an auth token: `turso db tokens create postcard-db`
-5. Add these values to your `.env` as `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
-6. Apply your schema: `npm run db:push`
+- Create a free account at [turso.tech](https://turso.tech) and install the Turso CLI.
+- Create a new database: `turso db create postcard-db`.
+- Get the database URL: `turso db show postcard-db --url`.
+- Generate an auth token: `turso db tokens create postcard-db`.
+- Add these values to your `.env` as `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+- Apply your schema: `npm run db:push`.
 
-### Local Development
+## Technology stack
 
-- Sync Schema: Use `npm run db:push` to apply schema changes from `src/db/schema.ts` to `local.db` without migrations.
-- Inspect Data: Use `npm run db:studio` to open the Drizzle Studio GUI for browsing cached analyses and forensic logs.
-
-## Stack
-
-Postcard utilizes a modern, type-safe stack designed for forensic performance and developer velocity.
+Postcard utilizes a modern stack designed for forensic performance and developer velocity.
 
 | Layer         | Choice                   | Why                                                              |
 | ------------- | ------------------------ | ---------------------------------------------------------------- |
@@ -158,25 +161,7 @@ Postcard utilizes a modern, type-safe stack designed for forensic performance an
 | Storage       | Drizzle + libSQL (Turso) | Ensures type-safe libSQL persistence for forensic logs.          |
 | Automation    | Playwright / sharp       | Handles headless scraping and image preprocessing.               |
 
-## AI SDK
-
-The Postcard pipeline relies heavily on the [Vercel AI SDK v6](https://sdk.vercel.ai/) for complex agentic orchestration.
-
-### AI SDK Skills
-
-The project uses AI SDK Skills to enforce industry-standard best practices. These localized intelligence configurations guide agentic assistants to follow idiomatic patterns for:
-
-- `streamText` iteration
-- `toolCall` payload handling
-- Multi-step search grounding
-
-This approach ensures 100% type-safety throughout the forensic pipeline.
-
-- [DESIGN.md](DESIGN.md): Overview of the 4-stage forensic pipeline.
-- [API.md](API.md): Documentation for public endpoints and the Playwright test suite.
-- [TESTING.md](TESTING.md): Manual checklist for verifying pipeline hardening and OG images.
-
-## Style guide
+## Documentation style guide
 
 To maintain a professional and consistent technical narrative, all documentation must follow these standards:
 

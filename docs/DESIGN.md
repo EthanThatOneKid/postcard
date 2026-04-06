@@ -1,11 +1,11 @@
 # Postcard design spec
 
-> **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves), [Rohit](https://github.com/rohitj26)
-> **Repository:** [postcardhq/postcard](https://github.com/postcardhq/postcard)  
-> **Submission:** [Devpost](https://devpost.com/software/postcard-bpx2mz)  
-> **Event:** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
-> **Track:** [Cybersecurity / OSINT](https://pantherhacks2026.devpost.com/)
-> **Stack:** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Playwright, sharp
+> **Team.** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves), [Rohit](https://github.com/rohitj26)
+> **Repository.** [postcardhq/postcard](https://github.com/postcardhq/postcard)  
+> **Submission.** [Devpost](https://devpost.com/software/postcard-bpx2mz)  
+> **Event.** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
+> **Track.** [Cybersecurity / OSINT](https://pantherhacks2026.devpost.com/)
+> **Stack.** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Playwright, sharp
 
 ## Project vision
 
@@ -25,12 +25,37 @@ Screenshots strip context. Cropped text, missing timestamps, and altered engagem
 
 Postcard operates as a forensic pipeline designed to audit social media content. While the system supports screenshot-to-URL resolution, the primary focus is the URL-based entrypoint, where users submit a direct post URL for deep forensic verification.
 
-### Forensic pipeline
+### Pipeline flow
 
-1. **Multimodal Ingest:** Utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
-2. **Forensic Audit:** Uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
-3. **Corroboration Engine:** Performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
-4. **Verification Platform:** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
+```
+Post URL
+    │
+    ▼
+┌───────────────────┐
+│ 1. Ingest         │  Multimodal (Scanning Source)
+└─────────┬─────────┘
+          ▼
+┌───────────────────┐
+│ 2. Audit          │  Playwright — live site verification
+└─────────┬─────────┘
+          ▼
+┌───────────────────┐
+│ 3. Corroboration  │  Gemini-powered deep search
+└─────────┬─────────┘
+          ▼
+┌───────────────────┐
+│ 4. Verification   │  Terminal-inspired platform
+└─────────┬─────────┘
+          ▼
+PostcardReport
+```
+
+### Forensic pipeline components
+
+- **Multimodal ingest.** Postcard utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
+- **Forensic audit.** Postcard uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
+- **Corroboration engine.** Postcard performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
+- **Verification platform.** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
 
 ### Stages
 
@@ -54,12 +79,12 @@ Gemini 2.5/3+ analyzes the processed image to extract structured metadata and in
 
 The navigator agent triangulates the source URL using OCR metadata and platform clues. It generates targeted search queries and prioritizes primary sources over aggregators.
 
-**Content Ingestion (UnifiedPost Strategy):** To ensure maximum reliability and bypass common "login required" blocks, Postcard uses a Strategy Pattern for data ingestion. The system inspects the URL and delegates to the most robust UnifiedPostClient:
+**Content ingestion (UnifiedPost strategy).** To ensure maximum reliability and bypass common "login required" blocks, Postcard uses a Strategy Pattern for data ingestion. The system inspects the URL and delegates to the most robust UnifiedPostClient:
 
-- **Reddit Strategy:** Uses the native `.json` endpoint for character-perfect markdown.
-- **YouTube Strategy:** Uses oEmbed for video metadata and shadow scrapers for community posts.
-- **Social oEmbed (X, TikTok, Instagram):** Leverages official oEmbed APIs to capture high-fidelity metadata (author names, absolute timestamps) even when direct scraping is blocked.
-- **Jina Fallback:** Acts as a high-fidelity markdown scraper for general websites.
+- **Reddit strategy.** Uses the native `.json` endpoint for character-perfect markdown.
+- **YouTube strategy.** Uses oEmbed for video metadata and shadow scrapers for community posts.
+- **Social oEmbed (X, TikTok, Instagram).** Leverages official oEmbed APIs to capture high-fidelity metadata (author names, absolute timestamps) even when direct scraping is blocked.
+- **Jina fallback.** Acts as a high-fidelity markdown scraper for general websites.
 
 This stage produces a UnifiedPost object, standardizing the "ground truth" for the forensic audit. When ingestion is blocked by a platform, the UI provides transparency by displaying the raw markdown retrieved during the attempt.
 
@@ -67,17 +92,17 @@ This stage produces a UnifiedPost object, standardizing the "ground truth" for t
 
 The verifier agent computes origin reachability and temporal alignment scores using Gemini. It performs Google Dorking to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
 
-## Database / Caching
+## Database and caching
 
 Postcard uses Drizzle ORM with Turso/libSQL for type-safe server-side caching and forensic log storage.
 
-### Caching strategy
+### Cache forensic results
 
-Postcard caches forensic results at the **Resolved Post URL** level.
+Postcard caches forensic results at the **resolved post URL** level.
 
-- **Cache Check:** Postcard queries the `posts` table for the resolved URL.
-- **Cache Hit:** Increment the `hits` count on the associated `analysis`. Serve cached forensic data and the postcard score.
-- **Cache Miss:** Scrape via Jina Reader, perform full corroboration, and persist a new forensic record.
+- **Cache check.** Postcard queries the `posts` table for the resolved URL.
+- **Cache hit.** Postcard increments the `hits` count on the associated `analysis`, then serves cached forensic data and the postcard score.
+- **Cache miss.** Postcard scrapes via Jina Reader, performs full corroboration, and persists a new forensic record.
 
 ## Score logic
 
@@ -111,13 +136,22 @@ For the complete API reference with examples, see **[API.md](API.md)**.
 
 | Method   | Path                     | Description                                                                                     |
 | :------- | :----------------------- | :---------------------------------------------------------------------------------------------- |
-| **GET**  | `/postcards?url=`        | SSR page - displays forensic report for the given URL (or initiates new analysis if not cached) |
-| **GET**  | `/api/postcards?url=`    | API with content negotiation - returns JSON if `Accept: application/json`, otherwise redirects  |
-| **POST** | `/api/postcards`         | Submit post URL and start forensic analysis                                                     |
+| **GET**  | `/postcards?url=`        | SSR page - core entrypoint. Displays report or initiates new analysis if API key cookie is set. |
+| **GET**  | `/api/postcards?url=`    | API read-only - returns current DB state (200 OK, 202 Processing, or 404 Not Found).            |
+| **POST** | `/api/postcards`         | Submit post URL and start forensic analysis (accepts JSON body with `userApiKey`).              |
 | **GET**  | `/api/postcards/[id]/og` | Generates a dynamic High-Fidelity Open Graph PNG image for social media embeds                  |
 
 ### API design decisions
 
-- **Content negotiation:** The `GET /api/postcards?url=` endpoint supports content negotiation. If the request includes `Accept: application/json`, it returns a JSON response with the forensic report. Otherwise, it redirects to the SSR page at `/postcards?url=`.
-- **URL-based entrypoint:** Users submit the direct source URL via query parameter (`?url=`) for deep forensic verification.
-- **Polling progress:** The `POST /api/postcards` endpoint accepts a JSON body (e.g., `{ "url": "..." }`) and initiates background analysis. Clients should poll `GET /api/postcards?url=...` for updates.
+- **Server-side rendering (SSR) entrypoint.** The `/postcards?url=` page provides the primary way users interact with the system. It automatically starts an analysis if the URL is not cached and the `postcard_api_key` cookie contains a valid Gemini API key.
+- **Cookie-based transport.** To support SSR auto-start, the Gemini API key is stored in a browser cookie. This allows the server to read the key during the initial document request without requiring a client-side POST.
+- **Read-only GET API.** The `GET /api/postcards?url=` endpoint is strictly read-only. It does not trigger new analyses or refreshes, ensuring predictable behavior for external callers and polling.
+- **Cached results.** Postcard makes completed forensic reports public; they require no API key to view. A user's key is only used to initiate a fresh analysis or a forced refresh.
+- **Polling progress.** Clients should poll `GET /api/postcards?url=...` for updates while an analysis is in the `processing` state.
+
+## Known constraints and performance
+
+The Postcard pipeline relies on the **Google Gemini API Free Tier**, which imposes strict rate limits (e.g., `GenerateRequestsPerMinutePerProjectPerModel`).
+
+- **Rate limits.** During heavy analysis, the system may return a `429 Too Many Requests` error. The UI gracefully handles these by transitioning to a failed state.
+- **Demo stable.** For production demonstrations, it is recommended to use **Fake Mode** (`NEXT_PUBLIC_FAKE_PIPELINE=true`) to ensure 100% responsiveness without hitting AI quota.

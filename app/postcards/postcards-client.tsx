@@ -2,7 +2,12 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Hero, DropZone, AnalysisJourney } from "@/components/features/landing";
+import {
+  Hero,
+  DropZone,
+  AnalysisJourney,
+  ApiKeyDialog,
+} from "@/components/features/landing";
 import { ForensicReport } from "@/components/features/forensics";
 import type { PostcardReport } from "@/src/api/schemas";
 import { normalizePostUrl } from "@/src/lib/url";
@@ -24,6 +29,7 @@ interface Props {
   initialReport: PostcardReport | null;
   processingUrl: string | null;
   shouldReplay?: boolean;
+  needsApiKey?: boolean;
 }
 
 export default function PostcardsClient({
@@ -31,6 +37,7 @@ export default function PostcardsClient({
   initialReport,
   processingUrl,
   shouldReplay = false,
+  needsApiKey = false,
 }: Props) {
   const router = useRouter();
 
@@ -42,7 +49,10 @@ export default function PostcardsClient({
 
   useEffect(() => {
     if (!isReplay) {
-      setReport(initialReport);
+      const timeoutId = setTimeout(() => {
+        setReport(initialReport);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [initialReport, isReplay]);
 
@@ -53,6 +63,9 @@ export default function PostcardsClient({
   const [mockStatus, setMockStatus] = useState<PostcardStatus | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  // API key dialog — shown when the server tells us a key is needed
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(needsApiKey);
 
   // Mock processing for "Dry Rerun" (replay)
   useEffect(() => {
@@ -131,8 +144,6 @@ export default function PostcardsClient({
   }, []);
 
   useEffect(() => {
-    // If we're performing a real analysis (processingUrl), ALWAYS poll
-    // regardless of isReplay. This ensures the DB result is updated.
     if (processingUrl && !report && !postcardStatus) {
       startPolling(processingUrl);
     }
@@ -157,6 +168,11 @@ export default function PostcardsClient({
     return "upload";
   }, [report, postUrl, currentStatus, isSubmitting, isReplay]);
 
+  /**
+   * Submit a URL for analysis. Navigates to the SSR page with
+   * refresh=true. The server reads the API key from the cookie
+   * and auto-starts the pipeline.
+   */
   const handleUrlSubmitted = useCallback(
     (url: string) => {
       const normalized = normalizePostUrl(url);
@@ -167,6 +183,23 @@ export default function PostcardsClient({
     },
     [router],
   );
+
+  /**
+   * Called when the user submits their API key from the dialog.
+   * Sets the cookie, then refreshes the page so the server
+   * can read it and auto-start the pipeline.
+   */
+  const handleApiKeySubmitted = useCallback(() => {
+    setShowApiKeyDialog(false);
+    // Refresh the current page — the server will now find the
+    // cookie and start the analysis.
+    router.refresh();
+  }, [router]);
+
+  const handleApiKeyCancel = useCallback(() => {
+    setShowApiKeyDialog(false);
+    router.push("/postcards");
+  }, [router]);
 
   const handleReportReady = useCallback((r: PostcardReport) => {
     setReport(r);
@@ -184,15 +217,27 @@ export default function PostcardsClient({
     router.push("/postcards");
   }, [router]);
 
+  // API key dialog overlay — shown in any stage if the server says we need a key
+  const apiKeyOverlay = (
+    <ApiKeyDialog
+      open={showApiKeyDialog}
+      onKeySubmitted={handleApiKeySubmitted}
+      onCancel={handleApiKeyCancel}
+    />
+  );
+
   if (pageStage === "analyzing" && postUrl) {
     return (
-      <AnalysisJourney
-        postUrl={postUrl}
-        postcardStatus={currentStatus}
-        onComplete={handleReportReady}
-        onReset={handleReset}
-        onSubmit={handleUrlSubmitted}
-      />
+      <>
+        {apiKeyOverlay}
+        <AnalysisJourney
+          postUrl={postUrl}
+          postcardStatus={currentStatus}
+          onComplete={handleReportReady}
+          onReset={handleReset}
+          onSubmit={handleUrlSubmitted}
+        />
+      </>
     );
   }
 
@@ -229,10 +274,13 @@ export default function PostcardsClient({
   }
 
   return (
-    <main>
-      <Hero>
-        <DropZone onUrlSubmitted={handleUrlSubmitted} />
-      </Hero>
-    </main>
+    <>
+      {apiKeyOverlay}
+      <main>
+        <Hero>
+          <DropZone onUrlSubmitted={handleUrlSubmitted} />
+        </Hero>
+      </main>
+    </>
   );
 }

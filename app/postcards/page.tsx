@@ -1,4 +1,5 @@
 import { cache, Suspense } from "react";
+import { cookies } from "next/headers";
 import { db } from "@/src/db";
 import {
   postcards,
@@ -15,6 +16,7 @@ import {
 } from "@/src/lib/postcard";
 import { getBaseUrl } from "@/src/lib/config";
 import { fromPostcardRow } from "@/src/api/conversions";
+import { API_KEY_COOKIE } from "@/src/lib/api-key-cookie";
 import PostcardsClient from "./postcards-client";
 import { waitUntil } from "@vercel/functions";
 
@@ -112,33 +114,69 @@ export default async function PostcardsPage({ searchParams }: Props) {
 
   let initialReport = null;
   let processingUrl = null;
+  let needsApiKey = false;
 
   if (normalizedUrl) {
     const data = await getPostcardsByUrl(normalizedUrl);
-    if (data && !shouldRefresh) {
-      initialReport = fromPostcardRow(data.postcardRow, data.postRow);
-      // Increment hit counter on every view of a completed report
-      if (data.postcardRow.status === "completed") {
-        incrementPostcardHits(data.postcardRow.id).catch(console.error);
-      }
-    } else if (normalizedUrl && (shouldRefresh || !data)) {
-      // Start fresh analysis if refresh=true OR no cached data exists
-      const { id } = await createPostcard(normalizedUrl);
-      waitUntil(
-        processPostcardFromUrl(
-          normalizedUrl,
-          undefined,
-          () => {},
-          true,
-          id,
-        ).catch(console.error),
-      );
-      processingUrl = normalizedUrl;
+    const isFakeMode = process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true";
 
-      // Even on refresh, if we have old data, we can use it for the "replay" mock
-      // This solves the refresh+replay stall.
-      if (data && shouldReplay) {
-        initialReport = fromPostcardRow(data.postcardRow, data.postRow);
+    if (data) {
+      const { postcardRow, postRow } = data;
+
+      if (
+        postcardRow.status === "pending" ||
+        postcardRow.status === "processing"
+      ) {
+        // Pipeline is already running — let the client poll
+        processingUrl = normalizedUrl;
+
+        if (shouldReplay) {
+          initialReport = fromPostcardRow(postcardRow, postRow);
+        }
+      } else if (postcardRow.status === "completed" && !shouldRefresh) {
+        // Cached result — serve directly, no key needed
+        initialReport = fromPostcardRow(postcardRow, postRow);
+        incrementPostcardHits(postcardRow.id).catch(console.error);
+      } else if (shouldRefresh) {
+        // User wants to re-run — need an API key (unless in fake mode)
+        const cookieStore = await cookies();
+        const apiKey = cookieStore.get(API_KEY_COOKIE)?.value || (isFakeMode ? "fake-key" : null);
+
+        if (apiKey) {
+          const { id } = await createPostcard(normalizedUrl);
+          waitUntil(
+            processPostcardFromUrl(
+              normalizedUrl,
+              apiKey,
+              () => {},
+              true,
+              id,
+            ).catch(console.error),
+          );
+          processingUrl = normalizedUrl;
+        } else {
+          needsApiKey = true;
+        }
+      }
+    } else {
+      // No cached data — need an API key to start fresh analysis (unless in fake mode)
+      const cookieStore = await cookies();
+      const apiKey = cookieStore.get(API_KEY_COOKIE)?.value || (isFakeMode ? "fake-key" : null);
+
+      if (apiKey) {
+        const { id } = await createPostcard(normalizedUrl);
+        waitUntil(
+          processPostcardFromUrl(
+            normalizedUrl,
+            apiKey,
+            () => {},
+            true,
+            id,
+          ).catch(console.error),
+        );
+        processingUrl = normalizedUrl;
+      } else {
+        needsApiKey = true;
       }
     }
   }
@@ -150,6 +188,7 @@ export default async function PostcardsPage({ searchParams }: Props) {
         initialReport={initialReport}
         processingUrl={processingUrl}
         shouldReplay={shouldReplay}
+        needsApiKey={needsApiKey}
       />
     </Suspense>
   );

@@ -29,7 +29,6 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get("url");
-    const refresh = searchParams.get("refresh") === "true";
 
     if (!url) {
       return NextResponse.json(
@@ -40,94 +39,70 @@ export async function GET(request: Request) {
 
     const normalizedUrl = normalizePostUrl(url);
 
-    // 1. If NOT refreshing, try to find cached result
-    if (!refresh) {
-      const result = await db
-        .select()
-        .from(postcards)
-        .innerJoin(posts, eq(posts.id, postcards.postId))
-        .where(eq(postcards.url, normalizedUrl))
-        .orderBy(sql`${postcards.createdAt} DESC`)
-        .limit(1);
+    const result = await db
+      .select()
+      .from(postcards)
+      .innerJoin(posts, eq(posts.id, postcards.postId))
+      .where(eq(postcards.url, normalizedUrl))
+      .orderBy(sql`${postcards.createdAt} DESC`)
+      .limit(1);
 
-      if (result.length > 0) {
-        const { postcards: row, posts: post } = result[0];
-
-        // If it's still processing, return a 202 status for polling parity
-        if (row.status === "pending" || row.status === "processing") {
-          return NextResponse.json(
-            {
-              status: "processing",
-              id: row.id,
-              stage: row.stage,
-              progress: row.progress,
-              message: row.message || "Forensic trace in progress...",
-            },
-            { status: 202, headers: CORS_HEADERS },
-          );
-        }
-
-        // If it failed, return the error context
-        if (row.status === "failed") {
-          return NextResponse.json(
-            {
-              status: "failed",
-              id: row.id,
-              error: row.error || "Analysis failed.",
-            },
-            { status: 200, headers: CORS_HEADERS },
-          );
-        }
-
-        const report = fromPostcardRow(row, post);
-
-        const parsed = PostcardResponseSchema.parse({
-          url: normalizedUrl,
-          markdown: post.markdown || "",
-          platform: row.platform || "Other",
-          corroboration: report.corroboration,
-          postcardScore: row.postcardScore / 100,
-          timestamp: row.createdAt.toISOString(),
-          id: row.id,
-          forensicReport: report,
-        });
-
-        return NextResponse.json(
-          { ...parsed, status: "completed" },
-          { headers: CORS_HEADERS },
-        );
-      }
-
-      // If not refreshing and not found, return 404 (parity with tests)
+    if (result.length === 0) {
       return NextResponse.json(
         {
           status: "not_found",
           error:
-            "Analysis not found. Use ?refresh=true to initiate a new trace.",
+            "Analysis not found. Submit this URL via the Postcard UI to start a trace.",
         },
         { status: 404, headers: CORS_HEADERS },
       );
     }
 
-    // 2. If refresh=true OR forced by logic above, start fresh analysis
-    const { id } = await createPostcard(normalizedUrl);
-    waitUntil(
-      processPostcardFromUrl(
-        normalizedUrl,
-        undefined,
-        () => {},
-        true,
-        id,
-      ).catch((err) => console.error("Background trace failed:", err)),
-    );
+    const { postcards: row, posts: post } = result[0];
+
+    // Still processing — return progress for polling
+    if (row.status === "pending" || row.status === "processing") {
+      return NextResponse.json(
+        {
+          status: "processing",
+          id: row.id,
+          stage: row.stage,
+          progress: row.progress,
+          message: row.message || "Forensic trace in progress...",
+        },
+        { status: 202, headers: CORS_HEADERS },
+      );
+    }
+
+    // Failed — return error context
+    if (row.status === "failed") {
+      return NextResponse.json(
+        {
+          status: "failed",
+          id: row.id,
+          error: row.error || "Analysis failed.",
+        },
+        { status: 200, headers: CORS_HEADERS },
+      );
+    }
+
+    // Completed — return full report
+    const report = fromPostcardRow(row, post);
+
+    const parsed = PostcardResponseSchema.parse({
+      url: normalizedUrl,
+      markdown: post.markdown || "",
+      platform: row.platform || "Other",
+      corroboration: report.corroboration,
+      postcardScore: row.postcardScore / 100,
+      timestamp: row.createdAt.toISOString(),
+      id: row.id,
+      forensicReport: report,
+    });
 
     return NextResponse.json(
-      {
-        status: "processing",
-        id,
-        message: "Forensic trace initialized.",
-      },
-      { status: 202, headers: CORS_HEADERS },
+      { ...parsed, status: "completed" },
+      { headers: CORS_HEADERS },
     );
   } catch (error) {
     console.error("API GET Error:", error);

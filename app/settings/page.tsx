@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/ui/navbar";
 import { Button } from "@/components/ui/button";
-
-const STORAGE_KEY = "postcard_user_api_key";
+import {
+  getApiKeyCookie,
+  setApiKeyCookie,
+  clearApiKeyCookie,
+} from "@/src/lib/api-key-cookie";
 
 export default function SettingsPage() {
   const [state, setState] = useState({
@@ -16,7 +19,7 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = getApiKeyCookie();
     // Use setTimeout to avoid synchronous setState in effect (lint error: react-hooks/set-state-in-effect)
     const timeoutId = setTimeout(() => {
       setState((prev) => ({
@@ -32,7 +35,7 @@ export default function SettingsPage() {
   const handleSave = () => {
     const trimmed = state.apiKey.trim();
     if (trimmed) {
-      localStorage.setItem(STORAGE_KEY, trimmed);
+      setApiKeyCookie(trimmed);
       setState((prev) => ({
         ...prev,
         hasApiKey: true,
@@ -43,7 +46,7 @@ export default function SettingsPage() {
   };
 
   const handleClear = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    clearApiKeyCookie();
     setState((prev) => ({
       ...prev,
       apiKey: "",
@@ -52,17 +55,30 @@ export default function SettingsPage() {
   };
 
   const handleTestApi = async () => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = getApiKeyCookie();
     if (!stored) return;
 
     try {
-      const res = await fetch("/api/postcards?url=https://x.com/test/123", {
-        headers: { "x-user-api-key": stored },
+      // Test via POST since that's how we send the API key now
+      const res = await fetch("/api/postcards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: "https://x.com/test/123",
+          userApiKey: stored,
+        }),
       });
-      if (res.ok || res.status === 202 || res.status === 404) {
-        alert("API key is valid! (Got response: " + res.status + ")");
+
+      if (res.ok || res.status === 202) {
+        alert("API key used successfully! (Status: " + res.status + ")");
       } else {
-        alert("API key may be invalid (Status: " + res.status + ")");
+        const data = await res.json().catch(() => ({}));
+        alert(
+          "API key test failed (Status: " +
+            res.status +
+            ")\n" +
+            (data.error || "Unknown error"),
+        );
       }
     } catch (err) {
       alert("Error testing API key: " + err);

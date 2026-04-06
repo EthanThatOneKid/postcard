@@ -1,4 +1,4 @@
-# Postcard API Documentation
+# Postcard API documentation
 
 > Official Hosted Docs: [Mintlify](https://www.mintlify.com/postcardhq/postcard)
 > Last updated: April 2026
@@ -19,26 +19,24 @@ Developers can generate clients using our [OpenAPI JSON specification](/openapi.
 
 We provide an interactive API reference powered by [Scalar](https://scalar.com):
 
-- **Local:** Run `npm run dev` and visit `http://localhost:3000/api/reference`
-- **Hosted:** Visit [https://postcard.fartlabs.org/api/reference](https://postcard.fartlabs.org/api/reference)
+- **Local.** Run `npm run dev` and visit `http://localhost:3000/api/reference`.
+- **Hosted.** Visit [https://postcard.fartlabs.org/api/reference](https://postcard.fartlabs.org/api/reference).
 
 ## Endpoints
 
-### GET /api/postcards
+### Fetch postcard status (GET /api/postcards)
 
-Retrieves the forensic verification result for a given URL. Use for polling postcard status.
+Retrieves the forensic verification result for a given URL. Use this endpoint for polling postcard status.
 
-**Query parameters:**
+**Query parameters.**
 
 | Parameter | Required | Description                         |
 | :-------- | :------- | :---------------------------------- |
 | `url`     | Yes      | The social media post URL to verify |
 
-**Response:**
+**Response.** Returns JSON with postcard status and optionally the full report.
 
-Returns JSON with postcard status and optionally the full report.
-
-**Processing response (200):**
+**Processing response (200).**
 
 ```json
 {
@@ -49,7 +47,7 @@ Returns JSON with postcard status and optionally the full report.
 }
 ```
 
-**Completed response (200):**
+**Completed response (200).**
 
 ```json
 {
@@ -84,7 +82,7 @@ Returns JSON with postcard status and optionally the full report.
 }
 ```
 
-**Failed response (200):**
+**Failed response (200).**
 
 ```json
 {
@@ -93,26 +91,26 @@ Returns JSON with postcard status and optionally the full report.
 }
 ```
 
-**Not found (404):**
+**Not found (404).**
 
 ```json
 {
   "status": "not_found",
-  "error": "Analysis not found. POST to /api/postcards to initiate a new trace."
+  "error": "Analysis not found. Submit this URL via the Postcard UI or the POST endpoint to start a trace."
 }
 ```
 
-### POST /api/postcards
+### Submit URL for verification (POST /api/postcards)
 
-Submits a new URL for forensic verification. Creates a postcard and returns immediately with a postcardId. Poll GET endpoint for status updates.
+Submits a new URL for forensic verification. This endpoint creates a postcard and returns immediately with a `postcardId`. Poll the GET endpoint for status updates.
 
-**Headers:**
+**Headers.**
 
 | Header         | Required | Description        |
 | :------------- | :------- | :----------------- |
 | `Content-Type` | Yes      | `application/json` |
 
-**Body:**
+**Body.**
 
 | Field        | Required | Type    | Description                        |
 | :----------- | :------- | :------ | :--------------------------------- |
@@ -120,7 +118,7 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 | `userApiKey` | No       | string  | Optional API key for rate limiting |
 | `refresh`    | No       | boolean | Force re-analysis even if cached   |
 
-**Request:**
+**Request example.**
 
 ```json
 {
@@ -130,7 +128,7 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 }
 ```
 
-**Response (202 Accepted):**
+**Response (202 Accepted).**
 
 ```json
 {
@@ -140,50 +138,24 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 }
 ```
 
-**Response (200):**
-
-If a processing postcard already exists for this URL, returns that postcard instead of creating a new one:
-
-```json
-{
-  "postcardId": "abc-123",
-  "status": "processing",
-  "stage": "starting",
-  "message": "Initializing...",
-  "progress": 0
-}
-```
-
-If a completed analysis exists and `refresh` is not set, returns cached results:
-
-```json
-{
-  "postcardId": "abc-123",
-  "status": "completed",
-  "postcard": { ... },
-  "markdown": "...",
-  ...
-}
-```
-
-### GET /api/postcards/[id]/og
+### Generate Open Graph image (GET /api/postcards/[id]/og)
 
 Generates a dynamic Open Graph (OG) social card image for a completed postcard. This endpoint is used automatically by the `<meta property="og:image">` tags on the SSR report page to ensure forensic reports unfurl elegantly on platforms like Discord and X. The returned content type is `image/png`.
 
-**Path parameters:**
+**Path parameters.**
 
 | Parameter | Required | Description                              |
 | :-------- | :------- | :--------------------------------------- |
 | `id`      | Yes      | The UUID of the completed postcard trace |
 
-### Polling for Status
+## Poll for status updates
 
-1. Call `POST /api/postcards` with the URL to start analysis
-2. Use the returned `postcardId` to poll `GET /api/postcards?url=...` every 3-5 seconds
-3. When `status` changes to `completed`, the full report is in the response
-4. If `status` is `failed`, check the `error` field for details
+- **Initialize analysis.** Call `POST /api/postcards` with the URL to start analysis.
+- **Track progress.** Use the returned `postcardId` to poll `GET /api/postcards?url=...` every 3-5 seconds.
+- **Handle completion.** When `status` changes to `completed`, the full report is in the response.
+- **Handle failure.** If `status` is `failed`, check the `error` field for details.
 
-**Example polling loop:**
+**Example polling loop.**
 
 ```bash
 # Start analysis
@@ -209,9 +181,9 @@ while true; do
 done
 ```
 
-## CORS
+## Cross-origin resource sharing (CORS)
 
-The API includes CORS headers for cross-origin requests:
+Postcard includes CORS headers for cross-origin requests:
 
 ```
 Access-Control-Allow-Origin: *
@@ -219,12 +191,12 @@ Access-Control-Allow-Methods: GET, POST, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Accept
 ```
 
-## Rate Limits
+## Rate limits
 
-- Default: 60 requests per minute per IP (development)
-- Production limits configured via Vercel Edge/Serverless functions
+- **Development default.** 60 requests per minute per IP.
+- **Production limits.** Configured via Vercel Edge/Serverless functions.
 
-## Supported Platforms
+## Supported platforms
 
 - X (twitter.com)
 - Reddit

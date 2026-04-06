@@ -25,21 +25,26 @@ test.describe("Postcards API", () => {
     }) => {
       // 1. Kick off analysis
       const postResponse = await request.post("/api/postcards", {
-        data: { url },
+        data: { url, refresh: true },
       });
       expect(postResponse.status()).toBe(202);
       const postBody = await postResponse.json();
       expect(postBody.status).toBe("processing");
       const id = postBody.id;
 
-      // 2. Poll via GET - should be 202 initially
+      // 2. Poll via GET - should be 202 initially (but might be 200 if fast)
       const getPoll = await request.get(
         `/api/postcards?url=${encodeURIComponent(url)}`,
       );
-      expect(getPoll.status()).toBe(202);
+      expect([200, 202]).toContain(getPoll.status());
       const pollBody = await getPoll.json();
-      expect(pollBody.status).toBe("processing");
       expect(pollBody.id).toBe(id);
+
+      if (getPoll.status() === 200) {
+        expect(pollBody.status).toBe("completed");
+        return; // Already done
+      }
+      expect(pollBody.status).toBe("processing");
 
       // 3. Wait for completion (live mode can be slow)
       // We poll until 200 or timeout

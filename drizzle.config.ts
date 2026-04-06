@@ -9,6 +9,6 @@ if (dbUrl.startsWith("libsql://")) {
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dialect: "sqlite",
+  dialect: dbUrl.startsWith("libsql://") ? "turso" : "sqlite",
   dbCredentials,
 });
