@@ -128,7 +128,20 @@ _\* Reddit keys are optional but recommended for higher rate limits._
 
 ## Database
 
-Postcard uses Drizzle ORM with SQLite for local development.
+Postcard uses Drizzle ORM with libSQL (SQLite) and [Turso](https://turso.tech). By default, it uses a local SQLite file (`local.db`) for rapid development.
+
+### Turso Cloud Setup (Remote Database)
+
+To connect to a remote Turso database for production or cloud testing:
+
+1. Create a free account at [turso.tech](https://turso.tech) and install the Turso CLI.
+2. Create a new database: `turso db create postcard-db`
+3. Get the database URL: `turso db show postcard-db --url`
+4. Generate an auth token: `turso db tokens create postcard-db`
+5. Add these values to your `.env` as `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+6. Apply your schema: `npm run db:push`
+
+### Local Development
 
 - Sync Schema: Use `npm run db:push` to apply schema changes from `src/db/schema.ts` to `local.db` without migrations.
 - Inspect Data: Use `npm run db:studio` to open the Drizzle Studio GUI for browsing cached analyses and forensic logs.
