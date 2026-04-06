@@ -6,7 +6,12 @@
     "version": "1.0.0",
     "contact": {
       "name": "Postcard HQ",
-      "url": "https://github.com/postcardhq/postcard"
+      "url": "https://postcard.fartlabs.org",
+      "x-github": "https://github.com/postcardhq/postcard"
+    },
+    "externalDocs": {
+      "description": "Full API Reference",
+      "url": "https://postcard.fartlabs.org/api/reference"
     }
   },
   "servers": [
@@ -127,6 +132,10 @@
       "post": {
         "summary": "Initiate new trace",
         "description": "Submits a new URL for forensic verification. Returns a postcard ID for polling status.",
+        "externalDocs": {
+          "description": "Full documentation for this endpoint",
+          "url": "https://postcard.fartlabs.org/api/reference#POST/postcards"
+        },
         "requestBody": {
           "required": true,
           "content": {

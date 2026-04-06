@@ -10,6 +10,7 @@
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-black?logo=openapi-initiative&logoColor=white)](public/openapi.json)
 [![Mintlify](https://img.shields.io/badge/Mintlify-black?logo=mintlify&logoColor=white)](https://www.mintlify.com/postcardhq/postcard)
+[![Scalar](https://img.shields.io/badge/Scalar-API_Reference-blue)](https://postcard.fartlabs.org/api/reference)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/postcardhq/postcard)
 
 > _Trace the Truth._
