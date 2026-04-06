@@ -268,7 +268,24 @@ export async function processPostcardFromUrl(
       }
 
       if (id) {
-        await await db
+        const pIdRow = await db
+          .select({ postId: postcards.postId })
+          .from(postcards)
+          .where(eq(postcards.id, id))
+          .limit(1);
+        if (pIdRow.length > 0) {
+          await db
+            .update(posts)
+            .set({
+              platform: FAKE_POSTCARD_RESPONSE.platform,
+              markdown: FAKE_POSTCARD_RESPONSE.markdown,
+              mainText: FAKE_POSTCARD_RESPONSE.markdown.slice(0, 500),
+              updatedAt: new Date(),
+            })
+            .where(eq(posts.id, pIdRow[0].postId));
+        }
+
+        await db
           .update(postcards)
           .set({
             platform: FAKE_POSTCARD_RESPONSE.platform,

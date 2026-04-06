@@ -81,17 +81,19 @@ export async function GET(request: Request) {
 
         const report = fromPostcardRow(row, post);
 
+        const parsed = PostcardResponseSchema.parse({
+          url: normalizedUrl,
+          markdown: post.markdown || "",
+          platform: row.platform || "Other",
+          corroboration: report.corroboration,
+          postcardScore: row.postcardScore / 100,
+          timestamp: row.createdAt.toISOString(),
+          id: row.id,
+          forensicReport: report,
+        });
+
         return NextResponse.json(
-          PostcardResponseSchema.parse({
-            url: normalizedUrl,
-            markdown: post.markdown || "",
-            platform: row.platform || "Other",
-            corroboration: report.corroboration,
-            postcardScore: row.postcardScore / 100,
-            timestamp: row.createdAt.toISOString(),
-            id: row.id,
-            forensicReport: report,
-          }),
+          { ...parsed, status: "completed" },
           { headers: CORS_HEADERS },
         );
       }
@@ -168,17 +170,18 @@ export async function POST(request: Request) {
         const { postcards: row, posts: post } = existingResult[0];
         if (row.status === "completed") {
           const report = fromPostcardRow(row, post);
+          const parsed = PostcardResponseSchema.parse({
+            url: normalizedUrl,
+            markdown: post.markdown || "",
+            platform: row.platform || "Other",
+            corroboration: report.corroboration,
+            postcardScore: row.postcardScore / 100,
+            timestamp: row.createdAt.toISOString(),
+            id: row.id,
+            forensicReport: report,
+          });
           return NextResponse.json(
-            PostcardResponseSchema.parse({
-              url: normalizedUrl,
-              markdown: post.markdown || "",
-              platform: row.platform || "Other",
-              corroboration: report.corroboration,
-              postcardScore: row.postcardScore / 100,
-              timestamp: row.createdAt.toISOString(),
-              id: row.id,
-              forensicReport: report,
-            }),
+            { ...parsed, status: "completed" },
             { headers: CORS_HEADERS },
           );
         }

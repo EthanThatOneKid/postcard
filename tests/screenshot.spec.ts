@@ -30,6 +30,6 @@ test("screenshot live run", async ({ page }) => {
   await scoreDisplay.waitFor({ state: "visible", timeout: 90000 });
 
   // 5. Final Report Snapshot
-  await page.waitForTimeout(2000); // give animations a moment to settle
+  await page.waitForTimeout(3000); // give animations a moment to settle
   await page.screenshot({ path: "docs/report.png", fullPage: true });
 });

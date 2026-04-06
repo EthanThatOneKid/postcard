@@ -302,15 +302,18 @@ export function AnalysisJourney({
       currentStatus === "completed" &&
       lastStatusRef.current !== "completed"
     ) {
-      if (postcardStatus.postcard && postcardStatus.markdown) {
+      // API responses wrap the data in `forensicReport`, while client mocks flatten it.
+      const dataSrc = (postcardStatus as any).forensicReport ?? postcardStatus;
+
+      if (dataSrc.postcard && typeof dataSrc.markdown === "string") {
         const report: PostcardReport = {
-          postcard: postcardStatus.postcard as PostcardReport["postcard"],
-          markdown: postcardStatus.markdown,
+          postcard: dataSrc.postcard as PostcardReport["postcard"],
+          markdown: dataSrc.markdown,
           triangulation:
-            postcardStatus.triangulation as PostcardReport["triangulation"],
-          audit: postcardStatus.audit as PostcardReport["audit"],
+            dataSrc.triangulation as PostcardReport["triangulation"],
+          audit: dataSrc.audit as PostcardReport["audit"],
           corroboration:
-            postcardStatus.corroboration as PostcardReport["corroboration"],
+            dataSrc.corroboration as PostcardReport["corroboration"],
           timestamp: postcardStatus.timestamp ?? new Date().toISOString(),
           id: postcardStatus.id,
         };
